@@ -66,4 +66,17 @@ router.get('/portfolios/:portfolioId', async (req: AuthRequest, res: Response) =
   }
 })
 
+router.get('/competitions/:competitionId/leaderboard', async (req: AuthRequest, res: Response) => {
+  try {
+    const { competitionId } = req.params
+    const refresh = req.query.refresh === 'true'
+    const compIdString = Array.isArray(competitionId) ? competitionId[0] : competitionId
+
+    const leaderboard = await tradingService.getLeaderboard(Number(compIdString), refresh)
+    res.json(leaderboard)
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
 export default router

@@ -9,6 +9,7 @@ import Navbar from '@/components/Navbar'
 import CompetitionsPage from '@/pages/CompetitionsPage'
 import TradingPage from '@/pages/TradingPage'
 import PortfolioPage from '@/pages/PortfolioPage'
+import LeaderboardPage from '@/pages/LeaderboardPage'
 
 function App() {
   const location = useLocation()
@@ -24,6 +25,7 @@ function App() {
         <Route path="/competitions" element={<CompetitionsPage />} />
         <Route path="/portfolio" element={<PortfolioPage />} />
         <Route path="/trade" element={<TradingPage />} />
+        <Route path="/leaderboard/:competitionId" element={<LeaderboardPage />} />
       </Routes>
     </div>
   )

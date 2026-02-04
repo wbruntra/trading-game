@@ -99,12 +99,26 @@ export class TradingService {
         )
 
         results.forEach((p) => {
+          let holdingsValue = 0
           p.holdings.forEach((h: any) => {
             const quote = quotesMap.get(h.optionSymbol)
             if (quote) {
               h.lastPrice = quote.regularMarketPrice
+              holdingsValue += quote.regularMarketPrice * h.quantity * 100
             }
           })
+
+          // Update cached value in DB as well
+          const totalValue = Number(p.cash_balance) + holdingsValue
+          db('portfolios')
+            .where({ id: p.id })
+            .update({
+              total_value: totalValue,
+              last_updated_at: new Date(),
+            })
+            .catch((err) =>
+              console.error(`Failed to background update portfolio ${p.id} value:`, err),
+            )
         })
       } catch (error) {
         console.error('Failed to fetch batch quotes for portfolios:', error)
@@ -134,18 +148,101 @@ export class TradingService {
           ]),
         )
 
+        let holdingsValue = 0
         holdings.forEach((h) => {
           const quote = quotesMap.get(h.optionSymbol)
           if (quote) {
             h.lastPrice = quote.regularMarketPrice
+            holdingsValue += quote.regularMarketPrice * h.quantity * 100
           }
         })
+
+        // Background update cached value in DB
+        const totalValue = Number(portfolio.cash_balance) + holdingsValue
+        db('portfolios')
+          .where({ id: portfolioId })
+          .update({
+            total_value: totalValue,
+            last_updated_at: new Date(),
+          })
+          .catch((err) =>
+            console.error(`Failed to background update portfolio ${portfolioId} value:`, err),
+          )
       } catch (error) {
         console.error(`Failed to fetch quotes for portfolio ${portfolioId}:`, error)
       }
+    } else {
+      // Background update even if no holdings (just cash)
+      db('portfolios')
+        .where({ id: portfolioId })
+        .update({
+          total_value: Number(portfolio.cash_balance),
+          last_updated_at: new Date(),
+        })
+        .catch((err) =>
+          console.error(`Failed to background update portfolio ${portfolioId} value:`, err),
+        )
     }
 
     return { ...portfolio, trades, holdings }
+  }
+
+  async updatePortfolioValue(portfolioId: number, trx?: any) {
+    const dbInstance = trx || db
+    const portfolio = await dbInstance('portfolios').where({ id: portfolioId }).first()
+    const trades = await dbInstance('trades').where({ portfolio_id: portfolioId })
+    const holdings = this.calculateHoldings(trades)
+
+    let holdingsValue = 0
+    if (holdings.length > 0) {
+      try {
+        const optionSymbols = holdings.map((h) => h.optionSymbol)
+        const quotesArray = await marketDataService.getQuote(optionSymbols)
+        const quotesMap = new Map(
+          (Array.isArray(quotesArray) ? quotesArray : [quotesArray]).map((q: any) => [
+            q.symbol,
+            q,
+          ]),
+        )
+
+        holdings.forEach((h) => {
+          const quote = quotesMap.get(h.optionSymbol)
+          if (quote) {
+            holdingsValue += quote.regularMarketPrice * h.quantity * 100
+          }
+        })
+      } catch (error) {
+        console.error(
+          `Failed to fetch quotes for value update in portfolio ${portfolioId}:`,
+          error,
+        )
+      }
+    }
+
+    const totalValue = Number(portfolio.cash_balance) + holdingsValue
+    await dbInstance('portfolios').where({ id: portfolioId }).update({
+      total_value: totalValue,
+      last_updated_at: new Date(),
+    })
+
+    return totalValue
+  }
+
+  async getLeaderboard(competitionId: number, refresh: boolean = false): Promise<any[]> {
+    const portfolios = await db('portfolios')
+      .join('users', 'portfolios.user_id', 'users.id')
+      .where({ competition_id: competitionId })
+      .select('portfolios.*', 'users.username')
+
+    if (refresh) {
+      // Recalculate all in parallel
+      await Promise.all(portfolios.map((p) => this.updatePortfolioValue(p.id)))
+      // Re-fetch to get updated values
+      return this.getLeaderboard(competitionId, false)
+    }
+
+    // Sort by total_value descending
+    return portfolios.sort((a, b) => b.total_value - a.total_value)
   }
 
   async placeTrade(
@@ -240,6 +337,9 @@ export class TradingService {
         })
         .returning('*')
 
+      // 5. Update cached portfolio value
+      const newTotalValue = await this.updatePortfolioValue(portfolio.id, trx)
+
       await trx.commit()
       return {
         trade,
@@ -247,6 +347,7 @@ export class TradingService {
           tradeDetails.type === 'BUY'
             ? portfolio.cash_balance - totalCost
             : portfolio.cash_balance + totalCost,
+        newTotalValue,
       }
     } catch (error) {
       await trx.rollback()

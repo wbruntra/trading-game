@@ -116,21 +116,30 @@ export default function CompetitionsPage() {
               <p className="text-gray-400 mb-4">
                 Balance: ${comp.initial_balance.toLocaleString()}
               </p>
-              {isJoined ? (
+              <div className="flex gap-2">
+                {isJoined ? (
+                  <button
+                    onClick={() => handleSwitch(comp.id)}
+                    className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-semibold"
+                  >
+                    Portfolio
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleJoin(comp.id)}
+                    className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors font-semibold shadow-lg hover:shadow-purple-500/20"
+                  >
+                    Join
+                  </button>
+                )}
                 <button
-                  onClick={() => handleSwitch(comp.id)}
-                  className="w-full py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-semibold"
+                  onClick={() => navigate(`/leaderboard/${comp.id}`)}
+                  className="px-4 py-2 bg-gray-700 hover:bg-blue-600 rounded-lg transition-colors text-gray-300 hover:text-white"
+                  title="View Leaderboard"
                 >
-                  Open Portfolio
+                  🏆
                 </button>
-              ) : (
-                <button
-                  onClick={() => handleJoin(comp.id)}
-                  className="w-full py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors font-semibold shadow-lg hover:shadow-purple-500/20"
-                >
-                  Join Competition
-                </button>
-              )}
+              </div>
             </div>
           )
         })}

@@ -28,19 +28,53 @@ export class MarketDataService {
   }
 
   async getQuote(symbol: string | string[]) {
-    const cacheKey = `quote_${Array.isArray(symbol) ? symbol.sort().join(',') : symbol}`
-    const cachedData = cache.get(cacheKey)
-    if (cachedData) {
-      return cachedData
+    const isArrayInput = Array.isArray(symbol)
+    const symbols = isArrayInput ? symbol : [symbol]
+    const uniqueSymbols = Array.from(new Set(symbols))
+
+    const cachedQuotes: any[] = []
+    const missingSymbols: string[] = []
+
+    // 1. Check Cache for each symbol
+    for (const s of uniqueSymbols) {
+      const cacheKey = `quote_${s}`
+      const cached = cache.get(cacheKey)
+      if (cached) {
+        cachedQuotes.push(cached)
+      } else {
+        missingSymbols.push(s)
+      }
     }
 
-    try {
-      const result = await yahooFinance.quote(symbol)
-      cache.set(cacheKey, result)
-      return result
-    } catch (error) {
-      console.error(`Error in MarketDataService.getQuote for ${symbol}:`, error)
-      throw error
+    let fetchedQuotes: any[] = []
+
+    // 2. Fetch missing symbols
+    if (missingSymbols.length > 0) {
+      // console.log(`[MarketData] Fetching missing symbols: ${missingSymbols.join(', ')}`)
+      try {
+        const result = await yahooFinance.quote(missingSymbols)
+        fetchedQuotes = Array.isArray(result) ? result : [result]
+
+        // Cache new results
+        for (const q of fetchedQuotes) {
+          if (q && q.symbol) {
+            cache.set(`quote_${q.symbol}`, q)
+          }
+        }
+      } catch (error) {
+        console.error(`Error in MarketDataService.getQuote for ${missingSymbols}:`, error)
+        throw error
+      }
+    }
+
+    // 3. Combine results
+    const allQuotes = [...cachedQuotes, ...fetchedQuotes]
+
+    if (isArrayInput) {
+      return allQuotes
+    } else {
+      // If single string requested, return the single object (or first found)
+      return allQuotes.find((q) => q.symbol === symbol) || allQuotes[0]
     }
   }
 }

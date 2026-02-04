@@ -77,6 +77,15 @@ export interface OptionContract {
   impliedVolatility: number
 }
 
+export interface LeaderboardEntry {
+  id: number
+  user_id: number
+  username: string
+  total_value: number
+  cash_balance: number
+  last_updated_at: string
+}
+
 export interface TradeRequest {
   symbol: string
   optionSymbol: string
@@ -155,6 +164,16 @@ export const gameApi = createApi({
       }),
       invalidatesTags: ['Portfolio'], // Invalidate portfolio to update balance/holdings
     }),
+    getLeaderboard: builder.query<
+      LeaderboardEntry[],
+      { competitionId: string; refresh?: boolean }
+    >({
+      query: ({ competitionId, refresh }) =>
+        `/trading/competitions/${competitionId}/leaderboard${refresh ? '?refresh=true' : ''}`,
+      providesTags: (_result, _error, { competitionId }) => [
+        { type: 'Portfolio', id: `LEADERBOARD_${competitionId}` },
+      ],
+    }),
   }),
 })
 
@@ -167,4 +186,5 @@ export const {
   useGetPortfolioQuery,
   useGetMyPortfoliosQuery,
   usePlaceTradeMutation,
+  useGetLeaderboardQuery,
 } = gameApi
