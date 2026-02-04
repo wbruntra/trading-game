@@ -223,20 +223,34 @@ export class TradingService {
           const quote = quotesMap.get(h.optionSymbol)
           if (quote) {
             h.lastPrice = quote.regularMarketPrice
-            holdingsValue += quote.regularMarketPrice * h.quantity * 100
+            holdingsValue += (h.lastPrice || 0) * h.quantity * 100
+            console.log(
+              `[TradingService] Holding ${h.optionSymbol}: lastPrice=${h.lastPrice}, qty=${h.quantity}`,
+            )
+          } else {
+            console.warn(`[TradingService] No quote found for holding ${h.optionSymbol}`)
           }
         })
 
         // Background update cached value in DB
         const totalValue = Number(portfolio.cash_balance) + holdingsValue
+        console.log(
+          `[TradingService] Portfolio ${portfolio.id} Total Value: ${totalValue} (Cash: ${portfolio.cash_balance}, Holdings: ${holdingsValue})`,
+        )
         db('portfolios')
           .where({ id: portfolio.id })
           .update({
             total_value: totalValue,
             last_updated_at: new Date(),
           })
+          .then(() =>
+            console.log(`[TradingService] DB Update SUCCESS for portfolio ${portfolio.id}`),
+          )
           .catch((err) =>
-            console.error(`Failed to background update portfolio ${portfolio.id} value:`, err),
+            console.error(
+              `[TradingService] Failed to background update portfolio ${portfolio.id} value:`,
+              err,
+            ),
           )
       } catch (error) {
         console.error(`Failed to fetch quotes for portfolio ${portfolio.id}:`, error)

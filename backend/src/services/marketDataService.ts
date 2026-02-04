@@ -2,7 +2,7 @@ import YahooFinance from 'yahoo-finance2'
 import NodeCache from 'node-cache'
 
 const yahooFinance = new YahooFinance()
-const cache = new NodeCache({ stdTTL: 600 }) // Cache for 10 minutes
+const cache = new NodeCache({ stdTTL: 300 }) // Cache for 5 minutes
 
 export class MarketDataService {
   async getOptionsChain(symbol: string, date?: number) {
@@ -35,13 +35,14 @@ export class MarketDataService {
     const cachedQuotes: any[] = []
     const missingSymbols: string[] = []
 
-    // 1. Check Cache for each symbol
     for (const s of uniqueSymbols) {
       const cacheKey = `quote_${s}`
       const cached = cache.get(cacheKey)
       if (cached) {
+        console.log(`[MarketData] Cache HIT for ${s}`)
         cachedQuotes.push(cached)
       } else {
+        console.log(`[MarketData] Cache MISS for ${s}`)
         missingSymbols.push(s)
       }
     }
@@ -50,14 +51,16 @@ export class MarketDataService {
 
     // 2. Fetch missing symbols
     if (missingSymbols.length > 0) {
-      // console.log(`[MarketData] Fetching missing symbols: ${missingSymbols.join(', ')}`)
       try {
+        console.log(`[MarketData] API FETCH for symbols: ${missingSymbols.join(', ')}`)
         const result = await yahooFinance.quote(missingSymbols)
         fetchedQuotes = Array.isArray(result) ? result : [result]
+        console.log(`[MarketData] API SUCCESS: Fetched ${fetchedQuotes.length} quotes`)
 
         // Cache new results
         for (const q of fetchedQuotes) {
           if (q && q.symbol) {
+            console.log(`[MarketData] CACHING: ${q.symbol} price=${q.regularMarketPrice}`)
             cache.set(`quote_${q.symbol}`, q)
           }
         }
