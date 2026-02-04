@@ -40,7 +40,7 @@ export class AuthService {
 
     // Generate user token
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, {
-      expiresIn: '24h',
+      expiresIn: '30d',
     })
 
     return { token, user: { id: user.id, username: user.username } }
