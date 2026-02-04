@@ -38,6 +38,7 @@ export interface Holding {
   totalCost: number
   avgPrice: number
   strike: number
+  expirationDate: string
   lastPrice?: number
 }
 

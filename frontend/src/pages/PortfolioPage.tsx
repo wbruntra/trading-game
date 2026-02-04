@@ -14,6 +14,15 @@ export default function PortfolioPage() {
   const [placeTrade] = usePlaceTradeMutation()
   const navigate = useNavigate()
 
+  const formatExpiration = (yyyymmdd: string) => {
+    if (!yyyymmdd || yyyymmdd.length !== 6) return yyyymmdd
+    const yy = yyyymmdd.substring(0, 2)
+    const mm = yyyymmdd.substring(2, 4)
+    const dd = yyyymmdd.substring(4, 6)
+    const date = new Date(2000 + parseInt(yy), parseInt(mm) - 1, parseInt(dd))
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })
+  }
+
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedHolding, setSelectedHolding] = useState<any>(null)
 
@@ -184,6 +193,12 @@ export default function PortfolioPage() {
                         </div>
                       </div>
                       <div>
+                        <div className="text-xs text-gray-500 mb-0.5">Expires</div>
+                        <div className="font-mono font-semibold">
+                          {formatExpiration(holding.expirationDate)}
+                        </div>
+                      </div>
+                      <div>
                         <div className="text-xs text-gray-500 mb-0.5">Current Price</div>
                         <div className="font-mono font-semibold">
                           {holding.lastPrice ? (
@@ -239,6 +254,7 @@ export default function PortfolioPage() {
                     <th className="py-3">Side</th>
                     <th className="py-3 text-right">Qty</th>
                     <th className="py-3 text-right">Avg Price</th>
+                    <th className="py-3 text-right">Expires</th>
                     <th className="py-3 text-right">Current</th>
                     <th className="py-3 text-right">Value</th>
                     <th className="py-3 text-right">P/L</th>
@@ -274,6 +290,9 @@ export default function PortfolioPage() {
                           {(holding.avgPrice * 100).toLocaleString(undefined, {
                             maximumFractionDigits: 2,
                           })}
+                        </td>
+                        <td className="py-4 text-right font-mono">
+                          {formatExpiration(holding.expirationDate)}
                         </td>
                         <td className="py-4 text-right font-mono">
                           {holding.lastPrice ? (

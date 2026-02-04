@@ -14,6 +14,7 @@ export class TradingService {
         totalCost: number
         avgPrice: number
         strike: number
+        expirationDate: string
         lastPrice?: number
       }
     >()
@@ -25,7 +26,9 @@ export class TradingService {
         // Standard OCC: 6 digits date, 1 digit type, 8 digits strike (integer, div by 1000)
         const match = trade.option_symbol.match(/([A-Z]+)(\d{6})([CP])(\d{8})/)
         let strike = 0
+        let expirationDate = ''
         if (match) {
+          expirationDate = match[2] // YYMMDD
           strike = parseInt(match[4], 10) / 1000
         }
 
@@ -37,6 +40,7 @@ export class TradingService {
           totalCost: 0,
           avgPrice: 0,
           strike,
+          expirationDate,
         })
       }
 
