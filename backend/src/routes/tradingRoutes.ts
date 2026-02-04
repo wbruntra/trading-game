@@ -1,0 +1,69 @@
+import { Router, Response } from 'express'
+import tradingService from '@/services/tradingService'
+import { authenticateToken, AuthRequest } from '@/middleware/authMiddleware'
+
+const router = Router()
+
+router.use(authenticateToken)
+
+router.post('/competitions/:competitionId/trade', async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user.id
+    const { competitionId } = req.params
+    const { symbol, optionSymbol, type, side, quantity } = req.body
+
+    if (!symbol || !optionSymbol || !type || !side || !quantity) {
+      return res.status(400).json({ error: 'Missing required fields' })
+    }
+
+    // Validate types
+    if (type !== 'BUY' && type !== 'SELL') return res.status(400).json({ error: 'Invalid type' })
+    if (side !== 'CALL' && side !== 'PUT') return res.status(400).json({ error: 'Invalid side' })
+
+    // Handle TS potentially viewing params as array, though express usually string
+    const compIdString = Array.isArray(competitionId) ? competitionId[0] : competitionId
+
+    const result = await tradingService.placeTrade(userId, compIdString, {
+      symbol,
+      optionSymbol,
+      type,
+      side,
+      quantity: Number(quantity),
+    })
+
+    res.status(200).json(result)
+  } catch (error: any) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
+router.get('/portfolios', async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user.id
+    const portfolios = await tradingService.getPortfolios(userId)
+    res.json(portfolios)
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+router.get('/portfolios/:portfolioId', async (req: AuthRequest, res: Response) => {
+  try {
+    const { portfolioId } = req.params
+    const pIdString = Array.isArray(portfolioId) ? portfolioId[0] : portfolioId
+    const portfolio = await tradingService.getPortfolio(pIdString)
+
+    if (!portfolio) {
+      return res.status(404).json({ error: 'Portfolio not found' })
+    }
+
+    // Basic clean check: ensure user owns this portfolio or is viewing public data?
+    // For now allow viewing if auth'd.
+
+    res.json(portfolio)
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+export default router
