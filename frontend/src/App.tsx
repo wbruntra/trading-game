@@ -13,6 +13,7 @@ import LeaderboardPage from '@/pages/LeaderboardPage'
 import AuthInitializer from '@/components/AuthInitializer'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import PublicRoute from '@/components/PublicRoute'
+import RequiresCompetition from '@/components/RequiresCompetition'
 
 function App() {
   const location = useLocation()
@@ -34,9 +35,13 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/competitions" element={<CompetitionsPage />} />
-            <Route path="/portfolio" element={<PortfolioPage />} />
-            <Route path="/trade" element={<TradingPage />} />
             <Route path="/leaderboard/:competitionId" element={<LeaderboardPage />} />
+
+            {/* Routes requiring active competition */}
+            <Route element={<RequiresCompetition />}>
+              <Route path="/portfolio" element={<PortfolioPage />} />
+              <Route path="/trade" element={<TradingPage />} />
+            </Route>
           </Route>
         </Routes>
       </AuthInitializer>

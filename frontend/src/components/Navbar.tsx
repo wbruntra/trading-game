@@ -1,6 +1,8 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { logout } from '@/store/slices/authSlice'
+import { useGetCompetitionQuery } from '@/store/api/gameApi'
+import type { RootState } from '@/store'
 import { useState } from 'react'
 
 export default function Navbar() {
@@ -8,6 +10,11 @@ export default function Navbar() {
   const location = useLocation()
   const dispatch = useDispatch()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const { activeCompetitionId } = useSelector((state: RootState) => state.game)
+  const { data: activeCompetition } = useGetCompetitionQuery(activeCompetitionId!, {
+    skip: !activeCompetitionId,
+  })
 
   const handleLogout = () => {
     dispatch(logout())
@@ -31,6 +38,14 @@ export default function Navbar() {
             <Link to="/" className="text-xl font-bold text-green-400">
               Options Game
             </Link>
+            {activeCompetition && (
+              <span className="ml-4 px-3 py-1 bg-gray-700 rounded-lg text-sm text-gray-300 flex items-center gap-2">
+                <span className="hidden sm:inline">📊</span>
+                <span className="truncate max-w-[120px] sm:max-w-[200px]">
+                  {activeCompetition.name}
+                </span>
+              </span>
+            )}
           </div>
 
           {/* Desktop Navigation */}

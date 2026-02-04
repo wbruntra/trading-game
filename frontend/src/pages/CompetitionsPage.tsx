@@ -120,9 +120,9 @@ export default function CompetitionsPage() {
                 {isJoined ? (
                   <button
                     onClick={() => handleSwitch(comp.id)}
-                    className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors font-semibold"
+                    className="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors font-semibold"
                   >
-                    Portfolio
+                    Select
                   </button>
                 ) : (
                   <button

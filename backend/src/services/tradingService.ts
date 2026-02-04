@@ -187,6 +187,61 @@ export class TradingService {
     return { ...portfolio, trades, holdings }
   }
 
+  async getPortfolioByCompetition(userId: number, competitionId: number) {
+    const portfolio = await db('portfolios')
+      .select('portfolios.*', 'competitions.name as competition_name')
+      .join('competitions', 'portfolios.competition_id', 'competitions.id')
+      .where({ 'portfolios.user_id': userId, 'portfolios.competition_id': competitionId })
+      .first()
+
+    if (!portfolio) return null
+
+    const trades = await db('trades')
+      .where({ portfolio_id: portfolio.id })
+      .orderBy('timestamp', 'asc')
+
+    const holdings = this.calculateHoldings(trades)
+
+    // Fetch quotes for active holdings
+    if (holdings.length > 0) {
+      try {
+        const optionSymbols = holdings.map((h) => h.optionSymbol)
+        const quotesArray = await marketDataService.getQuote(optionSymbols)
+        const quotesMap = new Map(
+          (Array.isArray(quotesArray) ? quotesArray : [quotesArray]).map((q: any) => [
+            q.symbol,
+            q,
+          ]),
+        )
+
+        let holdingsValue = 0
+        holdings.forEach((h) => {
+          const quote = quotesMap.get(h.optionSymbol)
+          if (quote) {
+            h.lastPrice = quote.regularMarketPrice
+            holdingsValue += quote.regularMarketPrice * h.quantity * 100
+          }
+        })
+
+        // Background update cached value in DB
+        const totalValue = Number(portfolio.cash_balance) + holdingsValue
+        db('portfolios')
+          .where({ id: portfolio.id })
+          .update({
+            total_value: totalValue,
+            last_updated_at: new Date(),
+          })
+          .catch((err) =>
+            console.error(`Failed to background update portfolio ${portfolio.id} value:`, err),
+          )
+      } catch (error) {
+        console.error(`Failed to fetch quotes for portfolio ${portfolio.id}:`, error)
+      }
+    }
+
+    return { ...portfolio, trades, holdings }
+  }
+
   async updatePortfolioValue(portfolioId: number, trx?: any) {
     const dbInstance = trx || db
     const portfolio = await dbInstance('portfolios').where({ id: portfolioId }).first()

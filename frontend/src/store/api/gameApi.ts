@@ -178,6 +178,12 @@ export const gameApi = createApi({
       query: (id) => `/trading/portfolios/${id}`,
       providesTags: (_result, _error, id) => [{ type: 'Portfolio', id }],
     }),
+    getPortfolioByCompetition: builder.query<Portfolio, string>({
+      query: (competitionId) => `/trading/portfolios/competition/${competitionId}`,
+      providesTags: (_result, _error, competitionId) => [
+        { type: 'Portfolio', id: `COMP_${competitionId}` },
+      ],
+    }),
     placeTrade: builder.mutation<
       { trade: Trade; newBalance: number },
       { competitionId: string; trade: TradeRequest }
@@ -201,10 +207,7 @@ export const gameApi = createApi({
     }),
 
     // Saved Trades
-    saveTrade: builder.mutation<
-      SavedTrade,
-      { competitionId: string; trade: SaveTradeRequest }
-    >({
+    saveTrade: builder.mutation<SavedTrade, { competitionId: string; trade: SaveTradeRequest }>({
       query: ({ competitionId, trade }) => ({
         url: `/trading/competitions/${competitionId}/saved-trades`,
         method: 'POST',
@@ -240,6 +243,7 @@ export const {
   useJoinCompetitionMutation,
   useGetOptionsChainQuery,
   useGetPortfolioQuery,
+  useGetPortfolioByCompetitionQuery,
   useGetMyPortfoliosQuery,
   usePlaceTradeMutation,
   useGetLeaderboardQuery,

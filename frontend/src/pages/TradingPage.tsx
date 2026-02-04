@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'react-hot-toast'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import {
   useGetOptionsChainQuery,
@@ -10,25 +10,17 @@ import {
   useDeleteSavedTradeMutation,
   useExecuteSavedTradeMutation,
 } from '@/store/api/gameApi'
-import { useSelector, useDispatch } from 'react-redux'
-import { setActiveCompetition } from '@/store/slices/gameSlice'
+import { useSelector } from 'react-redux'
+import type { RootState } from '@/store'
 
 export default function TradingPage() {
-  const { activeCompetitionId } = useSelector((state: any) => state.game)
-  const dispatch = useDispatch()
-
-  const [searchParams] = useSearchParams()
-  const urlCompetitionId = searchParams.get('competitionId')
+  const { activeCompetitionId } = useSelector((state: RootState) => state.game)
   const navigate = useNavigate()
 
   const [symbol, setSymbol] = useState('')
   const [searchSymbol, setSearchSymbol] = useState('')
   const [selectedOption, setSelectedOption] = useState<any>(null)
 
-  // Prioritize URL param, then Redux state
-  const effectiveCompetitionId = urlCompetitionId || activeCompetitionId || ''
-
-  const [selectedCompetition, setSelectedCompetition] = useState(effectiveCompetitionId)
   const [quantity, setQuantity] = useState(1)
   const [selectedDate, setSelectedDate] = useState<number | undefined>(undefined)
   const [selectedDateIndex, setSelectedDateIndex] = useState(0)
@@ -53,8 +45,8 @@ export default function TradingPage() {
   const [deleteSavedTrade] = useDeleteSavedTradeMutation()
   const [executeSavedTrade] = useExecuteSavedTradeMutation()
 
-  const { data: savedTrades = [] } = useGetSavedTradesQuery(selectedCompetition, {
-    skip: !selectedCompetition,
+  const { data: savedTrades = [] } = useGetSavedTradesQuery(activeCompetitionId!, {
+    skip: !activeCompetitionId,
   })
 
   const handleSearch = (e: React.FormEvent) => {
@@ -62,25 +54,14 @@ export default function TradingPage() {
     setSearchSymbol(symbol)
   }
 
-  useEffect(() => {
-    if (urlCompetitionId) {
-      setSelectedCompetition(urlCompetitionId)
-      // Also update redux state if not set? User might share a link.
-      // Better to respect user's explicit navigation (URL).
-      dispatch(setActiveCompetition(urlCompetitionId))
-    } else if (activeCompetitionId) {
-      setSelectedCompetition(activeCompetitionId)
-    }
-  }, [urlCompetitionId, activeCompetitionId, dispatch])
-
   // ... (existing code)
 
   const handleTrade = async () => {
-    if (!selectedCompetition || !selectedOption) return
+    if (!activeCompetitionId || !selectedOption) return
 
     try {
       await placeTrade({
-        competitionId: selectedCompetition,
+        competitionId: activeCompetitionId,
         trade: {
           symbol: searchSymbol,
           optionSymbol: selectedOption.contractSymbol,
@@ -97,11 +78,11 @@ export default function TradingPage() {
   }
 
   const handleSaveForLater = async () => {
-    if (!selectedCompetition || !selectedOption) return
+    if (!activeCompetitionId || !selectedOption) return
 
     try {
       await saveTrade({
-        competitionId: selectedCompetition,
+        competitionId: activeCompetitionId,
         trade: {
           symbol: searchSymbol,
           optionSymbol: selectedOption.contractSymbol,
@@ -233,7 +214,7 @@ export default function TradingPage() {
                     const d = new Date(date)
                     const isCurrentYear = d.getFullYear() === new Date().getFullYear()
                     const isSelected = selectedDateIndex === i
-                    
+
                     return (
                       <button
                         key={i}
@@ -259,7 +240,10 @@ export default function TradingPage() {
             </div>
 
             {/* Scrollable List */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4 max-h-[50vh] lg:max-h-none" ref={scrollRef}>
+            <div
+              className="flex-1 overflow-y-auto p-3 sm:p-4 max-h-[50vh] lg:max-h-none"
+              ref={scrollRef}
+            >
               <div className="space-y-1">
                 <div className="grid grid-cols-4 text-xs font-semibold text-gray-500 px-3 sm:px-4 mb-2 uppercase tracking-wide">
                   <span className="hidden sm:block">Strike Price</span>
@@ -418,7 +402,7 @@ export default function TradingPage() {
 
                 <button
                   onClick={handleTrade}
-                  disabled={!selectedCompetition}
+                  disabled={!activeCompetitionId}
                   className="w-full py-4 bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700 rounded-xl font-bold text-lg shadow-lg hover:shadow-green-500/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   Place Order
@@ -426,7 +410,7 @@ export default function TradingPage() {
 
                 <button
                   onClick={handleSaveForLater}
-                  disabled={!selectedCompetition}
+                  disabled={!activeCompetitionId}
                   className="w-full py-3 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-semibold transition-all duration-200 border border-gray-600 hover:border-gray-500"
                 >
                   Save for Later
@@ -438,7 +422,7 @@ export default function TradingPage() {
       )}
 
       {/* Saved Trades Section */}
-      {selectedCompetition && savedTrades.length > 0 && (
+      {activeCompetitionId && savedTrades.length > 0 && (
         <div className="mt-6 sm:mt-8">
           <h2 className="text-xl sm:text-2xl font-bold mb-4">Saved Trades</h2>
           <div className="bg-gray-800 rounded-xl p-4 sm:p-6 shadow-xl border border-gray-700/50">
