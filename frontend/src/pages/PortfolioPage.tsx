@@ -160,6 +160,10 @@ export default function PortfolioPage() {
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <span className="text-xl font-bold">{holding.symbol}</span>
+                        <span className="text-sm text-gray-400 font-mono self-center">
+                          ${holding.strike.toFixed(2)}
+                        </span>
+
                         <span
                           className={`px-2 py-1 rounded text-xs font-bold ${
                             holding.side === 'CALL'
@@ -183,6 +187,10 @@ export default function PortfolioPage() {
                       <div>
                         <div className="text-xs text-gray-500 mb-0.5">Quantity</div>
                         <div className="font-mono font-semibold">{holding.quantity}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-0.5">Strike</div>
+                        <div className="font-mono font-semibold">${holding.strike.toFixed(2)}</div>
                       </div>
                       <div>
                         <div className="text-xs text-gray-500 mb-0.5">Avg Price</div>
@@ -252,6 +260,7 @@ export default function PortfolioPage() {
                 <thead>
                   <tr className="text-sm text-gray-400 border-b border-gray-700">
                     <th className="py-3">Symbol</th>
+                    <th className="py-3">Strike</th>
                     <th className="py-3">Side</th>
                     <th className="py-3 text-right">Qty</th>
                     <th className="py-3 text-right">Avg Price</th>
@@ -274,6 +283,7 @@ export default function PortfolioPage() {
                         className="border-b border-gray-700/50 hover:bg-gray-700/20"
                       >
                         <td className="py-4 font-bold">{holding.symbol}</td>
+                        <td className="py-4 font-mono">${holding.strike.toFixed(2)}</td>
                         <td className="py-4">
                           <span
                             className={`px-2 py-1 rounded text-xs font-bold ${
