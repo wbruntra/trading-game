@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useGetLeaderboardQuery } from '@/store/api/gameApi'
 import { format } from 'date-fns'
 
@@ -82,7 +82,12 @@ export default function LeaderboardPage() {
                   </div>
                 </td>
                 <td className="py-4 px-6">
-                  <span className="font-semibold text-lg">{entry.username}</span>
+                  <Link
+                    to={`/leaderboard/${competitionId}/portfolio/${entry.id}`}
+                    className="font-semibold text-lg hover:text-blue-400 hover:underline transition-colors"
+                  >
+                    {entry.username}
+                  </Link>
                 </td>
                 <td className="py-4 px-6 text-right">
                   <span className="font-mono text-xl font-bold text-green-400">

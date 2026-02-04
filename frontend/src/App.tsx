@@ -9,6 +9,7 @@ import Navbar from '@/components/Navbar'
 import CompetitionsPage from '@/pages/CompetitionsPage'
 import TradingPage from '@/pages/TradingPage'
 import PortfolioPage from '@/pages/PortfolioPage'
+import PublicPortfolioPage from '@/pages/PublicPortfolioPage'
 import LeaderboardPage from '@/pages/LeaderboardPage'
 import AuthInitializer from '@/components/AuthInitializer'
 import ProtectedRoute from '@/components/ProtectedRoute'
@@ -36,6 +37,10 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/competitions" element={<CompetitionsPage />} />
             <Route path="/leaderboard/:competitionId" element={<LeaderboardPage />} />
+            <Route
+              path="/leaderboard/:competitionId/portfolio/:portfolioId"
+              element={<PublicPortfolioPage />}
+            />
 
             {/* Routes requiring active competition */}
             <Route element={<RequiresCompetition />}>
