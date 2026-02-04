@@ -1,4 +1,5 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import HomePage from '@/pages/HomePage'
 import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
@@ -13,6 +14,7 @@ function App() {
   const location = useLocation()
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      <Toaster position="top-right" />
       {!['/login', '/register'].includes(location.pathname) && <Navbar />}
       <Routes>
         <Route path="/" element={<HomePage />} />

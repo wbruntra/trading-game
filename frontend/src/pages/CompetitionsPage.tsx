@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from 'react-hot-toast'
 import {
   useGetCompetitionsQuery,
   useGetMyPortfoliosQuery,
@@ -32,8 +33,10 @@ export default function CompetitionsPage() {
       }).unwrap()
       setShowCreate(false)
       setNewCompName('')
+      toast.success('Competition created!')
     } catch (err) {
       console.error('Failed to create competition', err)
+      toast.error('Failed to create competition')
     }
   }
 
@@ -44,6 +47,7 @@ export default function CompetitionsPage() {
       navigate('/portfolio')
     } catch (err) {
       console.error('Failed to join', err)
+      toast.error('Failed to join competition')
     }
   }
 

@@ -1,28 +1,43 @@
+import { useState } from 'react'
 import { useGetMyPortfoliosQuery, usePlaceTradeMutation } from '@/store/api/gameApi'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-hot-toast'
+import { ConfirmationModal } from '@/components/ConfirmationModal'
 
 export default function PortfolioPage() {
   const { data: portfolios, isLoading } = useGetMyPortfoliosQuery()
   const [placeTrade] = usePlaceTradeMutation()
   const navigate = useNavigate()
 
-  const handleSell = async (portfolioId: number, holding: any) => {
-    if (!confirm(`Sell ${holding.quantity} contracts of ${holding.optionSymbol}?`)) return
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedHolding, setSelectedHolding] = useState<any>(null)
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<number | null>(null)
+
+  const handleSellClick = (portfolioId: number, holding: any) => {
+    setSelectedPortfolioId(portfolioId)
+    setSelectedHolding(holding)
+    setModalOpen(true)
+  }
+
+  const handleConfirmSell = async () => {
+    if (!selectedHolding || !selectedPortfolioId) return
 
     try {
       await placeTrade({
-        competitionId: portfolios?.find((p) => p.id === portfolioId)?.competition_id.toString()!,
+        competitionId: portfolios
+          ?.find((p) => p.id === selectedPortfolioId)
+          ?.competition_id.toString()!,
         trade: {
-          symbol: holding.symbol,
-          optionSymbol: holding.optionSymbol,
+          symbol: selectedHolding.symbol,
+          optionSymbol: selectedHolding.optionSymbol,
           type: 'SELL',
-          side: holding.side,
-          quantity: holding.quantity,
+          side: selectedHolding.side,
+          quantity: selectedHolding.quantity,
         },
       }).unwrap()
-      alert('Sold successfully!')
+      toast.success('Sold successfully!')
     } catch (err: any) {
-      alert(`Failed to sell: ${err.data?.error || err.message}`)
+      toast.error(`Failed to sell: ${err.data?.error || err.message}`)
     }
   }
 
@@ -30,6 +45,15 @@ export default function PortfolioPage() {
 
   return (
     <div className="min-h-screen p-8 text-white">
+      <ConfirmationModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={handleConfirmSell}
+        title="Confirm Sell"
+        message={`Are you sure you want to sell ${selectedHolding?.quantity} contracts of ${selectedHolding?.optionSymbol}?`}
+        confirmText="Sell"
+      />
+
       <h1 className="text-3xl font-bold mb-4">My Portfolios</h1>
       <p className="text-gray-400 mb-8">View your performance across all active competitions.</p>
 
@@ -118,7 +142,7 @@ export default function PortfolioPage() {
                           </td>
                           <td className="py-4 text-right">
                             <button
-                              onClick={() => handleSell(portfolio.id, holding)}
+                              onClick={() => handleSellClick(portfolio.id, holding)}
                               className="px-3 py-1 bg-gray-700 hover:bg-red-600 hover:text-white rounded text-sm transition-colors"
                             >
                               Sell

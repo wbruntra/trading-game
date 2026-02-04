@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { toast } from 'react-hot-toast'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { useGetOptionsChainQuery, usePlaceTradeMutation } from '@/store/api/gameApi'
@@ -74,10 +75,10 @@ export default function TradingPage() {
           quantity,
         },
       }).unwrap()
-      alert('Trade placed successfully!')
+      toast.success('Trade placed successfully!')
       navigate('/portfolio')
     } catch (err: any) {
-      alert(`Trade failed: ${err.data?.error || 'Unknown error'}`)
+      toast.error(`Trade failed: ${err.data?.error || 'Unknown error'}`)
     }
   }
 
