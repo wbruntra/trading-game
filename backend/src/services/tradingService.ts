@@ -16,6 +16,7 @@ export class TradingService {
         strike: number
         expirationDate: string
         lastPrice?: number
+        underlyingPrice?: number
       }
     >()
 
@@ -90,16 +91,40 @@ export class TradingService {
 
     // Batch fetch quotes for all unique holdings across all portfolios
     const allOptionSymbols = new Set<string>()
-    results.forEach((p) => p.holdings.forEach((h: any) => allOptionSymbols.add(h.optionSymbol)))
+    const allUnderlyingSymbols = new Set<string>()
+
+    results.forEach((p) =>
+      p.holdings.forEach((h: any) => {
+        allOptionSymbols.add(h.optionSymbol)
+        allUnderlyingSymbols.add(h.symbol)
+      }),
+    )
 
     if (allOptionSymbols.size > 0) {
       try {
-        const quotesArray = await marketDataService.getQuote(Array.from(allOptionSymbols))
+        const optionQuotesPromise = marketDataService.getQuote(Array.from(allOptionSymbols))
+        const underlyingQuotesPromise =
+          allUnderlyingSymbols.size > 0
+            ? marketDataService.getQuote(Array.from(allUnderlyingSymbols))
+            : Promise.resolve([])
+
+        const [quotesArray, underlyingQuotesArray] = await Promise.all([
+          optionQuotesPromise,
+          underlyingQuotesPromise,
+        ])
+
         const quotesMap = new Map(
           (Array.isArray(quotesArray) ? quotesArray : [quotesArray]).map((q: any) => [
             q.symbol,
             q,
           ]),
+        )
+
+        const underlyingQuotesMap = new Map(
+          (Array.isArray(underlyingQuotesArray)
+            ? underlyingQuotesArray
+            : [underlyingQuotesArray]
+          ).map((q: any) => [q.symbol, q]),
         )
 
         results.forEach((p) => {
@@ -109,6 +134,10 @@ export class TradingService {
             if (quote) {
               h.lastPrice = quote.regularMarketPrice
               holdingsValue += quote.regularMarketPrice * h.quantity * 100
+            }
+            const underlyingQuote = underlyingQuotesMap.get(h.symbol)
+            if (underlyingQuote) {
+              h.underlyingPrice = underlyingQuote.regularMarketPrice
             }
           })
 
@@ -144,12 +173,28 @@ export class TradingService {
     if (holdings.length > 0) {
       try {
         const optionSymbols = holdings.map((h) => h.optionSymbol)
-        const quotesArray = await marketDataService.getQuote(optionSymbols)
+        const underlyingSymbols = Array.from(new Set(holdings.map((h) => h.symbol)))
+
+        const optionQuotesPromise = marketDataService.getQuote(optionSymbols)
+        const underlyingQuotesPromise = marketDataService.getQuote(underlyingSymbols)
+
+        const [quotesArray, underlyingQuotesArray] = await Promise.all([
+          optionQuotesPromise,
+          underlyingQuotesPromise,
+        ])
+
         const quotesMap = new Map(
           (Array.isArray(quotesArray) ? quotesArray : [quotesArray]).map((q: any) => [
             q.symbol,
             q,
           ]),
+        )
+
+        const underlyingQuotesMap = new Map(
+          (Array.isArray(underlyingQuotesArray)
+            ? underlyingQuotesArray
+            : [underlyingQuotesArray]
+          ).map((q: any) => [q.symbol, q]),
         )
 
         let holdingsValue = 0
@@ -158,6 +203,10 @@ export class TradingService {
           if (quote) {
             h.lastPrice = quote.regularMarketPrice
             holdingsValue += quote.regularMarketPrice * h.quantity * 100
+          }
+          const underlyingQuote = underlyingQuotesMap.get(h.symbol)
+          if (underlyingQuote) {
+            h.underlyingPrice = underlyingQuote.regularMarketPrice
           }
         })
 
@@ -210,12 +259,28 @@ export class TradingService {
     if (holdings.length > 0) {
       try {
         const optionSymbols = holdings.map((h) => h.optionSymbol)
-        const quotesArray = await marketDataService.getQuote(optionSymbols)
+        const underlyingSymbols = Array.from(new Set(holdings.map((h) => h.symbol)))
+
+        const optionQuotesPromise = marketDataService.getQuote(optionSymbols)
+        const underlyingQuotesPromise = marketDataService.getQuote(underlyingSymbols)
+
+        const [quotesArray, underlyingQuotesArray] = await Promise.all([
+          optionQuotesPromise,
+          underlyingQuotesPromise,
+        ])
+
         const quotesMap = new Map(
           (Array.isArray(quotesArray) ? quotesArray : [quotesArray]).map((q: any) => [
             q.symbol,
             q,
           ]),
+        )
+
+        const underlyingQuotesMap = new Map(
+          (Array.isArray(underlyingQuotesArray)
+            ? underlyingQuotesArray
+            : [underlyingQuotesArray]
+          ).map((q: any) => [q.symbol, q]),
         )
 
         let holdingsValue = 0
@@ -229,6 +294,10 @@ export class TradingService {
             )
           } else {
             console.warn(`[TradingService] No quote found for holding ${h.optionSymbol}`)
+          }
+          const underlyingQuote = underlyingQuotesMap.get(h.symbol)
+          if (underlyingQuote) {
+            h.underlyingPrice = underlyingQuote.regularMarketPrice
           }
         })
 

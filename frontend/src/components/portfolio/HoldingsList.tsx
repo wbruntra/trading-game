@@ -30,18 +30,20 @@ export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsLis
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <span className="text-xl font-bold">{holding.symbol}</span>
-                  <span className="text-sm text-gray-400 font-mono self-center">
-                    ${holding.strike.toFixed(2)}
-                  </span>
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-bold ${
-                      holding.side === 'CALL'
-                        ? 'bg-green-900 text-green-300'
-                        : 'bg-red-900 text-red-300'
-                    }`}
-                  >
-                    {holding.side}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-xs font-bold border ${
+                        holding.side === 'CALL'
+                          ? 'bg-green-900/40 text-green-400 border-green-700/50'
+                          : 'bg-red-900/40 text-red-400 border-red-700/50'
+                      }`}
+                    >
+                      {holding.side === 'CALL' ? 'C' : 'P'}
+                    </span>
+                    <span className="text-sm font-mono text-gray-300">
+                      ${holding.strike.toFixed(2)}
+                    </span>
+                  </div>
                 </div>
                 {!readOnly && onSell && (
                   <button
@@ -60,8 +62,14 @@ export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsLis
                   <div className="font-mono font-semibold">{holding.quantity}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500 mb-0.5">Strike</div>
-                  <div className="font-mono font-semibold">${holding.strike.toFixed(2)}</div>
+                  <div className="text-xs text-gray-500 mb-0.5">Share Price</div>
+                  <div className="font-mono font-semibold text-gray-300">
+                    {holding.underlyingPrice ? (
+                      `$${holding.underlyingPrice.toFixed(2)}`
+                    ) : (
+                      <span className="text-gray-600">---</span>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500 mb-0.5">Avg Price</div>
@@ -91,7 +99,7 @@ export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsLis
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500 mb-0.5">Market Value</div>
+                  <div className="text-xs text-gray-500 mb-0.5">Total</div>
                   <div className="font-mono font-semibold">
                     ${marketValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </div>
@@ -130,16 +138,16 @@ export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsLis
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="text-sm text-gray-400 border-b border-gray-700">
-              <th className="py-3">Symbol</th>
-              <th className="py-3">Strike</th>
-              <th className="py-3">Side</th>
+              <th className="py-3 pl-4">Symbol</th>
+              <th className="py-3">Strike/Type</th>
+              <th className="py-3 text-right">Share Price</th>
               <th className="py-3 text-right">Qty</th>
               <th className="py-3 text-right">Avg Price</th>
               <th className="py-3 text-right">Expires</th>
               <th className="py-3 text-right">Current</th>
-              <th className="py-3 text-right">Value</th>
+              <th className="py-3 text-right">Total</th>
               <th className="py-3 text-right">P/L</th>
-              {!readOnly && <th className="py-3 text-right">Action</th>}
+              {!readOnly && <th className="py-3 text-right pr-4">Action</th>}
             </tr>
           </thead>
           <tbody>
@@ -153,18 +161,28 @@ export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsLis
                   key={holding.optionSymbol}
                   className="border-b border-gray-700/50 hover:bg-gray-700/20"
                 >
-                  <td className="py-4 font-bold">{holding.symbol}</td>
-                  <td className="py-4 font-mono">${holding.strike.toFixed(2)}</td>
+                  <td className="py-4 pl-4 font-bold">{holding.symbol}</td>
                   <td className="py-4">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-bold ${
-                        holding.side === 'CALL'
-                          ? 'bg-green-900 text-green-300'
-                          : 'bg-red-900 text-red-300'
-                      }`}
-                    >
-                      {holding.side}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold border ${
+                          holding.side === 'CALL'
+                            ? 'bg-green-900/40 text-green-400 border-green-700/50'
+                            : 'bg-red-900/40 text-red-400 border-red-700/50'
+                        }`}
+                        title={holding.side}
+                      >
+                        {holding.side === 'CALL' ? 'C' : 'P'}
+                      </span>
+                      <span className="font-mono text-gray-300">${holding.strike.toFixed(2)}</span>
+                    </div>
+                  </td>
+                  <td className="py-4 text-right font-mono text-gray-300">
+                    {holding.underlyingPrice ? (
+                      `$${holding.underlyingPrice.toFixed(2)}`
+                    ) : (
+                      <span className="text-gray-600">---</span>
+                    )}
                   </td>
                   <td className="py-4 text-right font-mono">{holding.quantity}</td>
                   <td className="py-4 text-right font-mono">
@@ -203,7 +221,7 @@ export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsLis
                     </div>
                   </td>
                   {!readOnly && onSell && (
-                    <td className="py-4 text-right">
+                    <td className="py-4 text-right pr-4">
                       <button
                         onClick={() => onSell(holding)}
                         className="px-3 py-1 bg-gray-700 hover:bg-red-600 hover:text-white rounded text-sm transition-colors"

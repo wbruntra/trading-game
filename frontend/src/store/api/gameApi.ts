@@ -40,6 +40,7 @@ export interface Holding {
   strike: number
   expirationDate: string
   lastPrice?: number
+  underlyingPrice?: number
 }
 
 export interface Trade {
