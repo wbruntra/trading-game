@@ -132,7 +132,16 @@ export default function TradingPage() {
             {/* Header */}
             <div className="p-6 border-b border-gray-700">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold">{optionsChain.symbol}</h2>
+                <div>
+                  <h2 className="text-3xl font-bold flex items-baseline gap-3">
+                    {optionsChain.symbol}
+                    {optionsChain.quote?.longName && (
+                      <span className="text-lg font-normal text-gray-400">
+                        {optionsChain.quote.longName}
+                      </span>
+                    )}
+                  </h2>
+                </div>
                 <div className="text-3xl font-mono text-green-400">${currentPrice.toFixed(2)}</div>
               </div>
 

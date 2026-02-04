@@ -27,8 +27,8 @@ export class MarketDataService {
     }
   }
 
-  async getQuote(symbol: string) {
-    const cacheKey = `quote_${symbol}`
+  async getQuote(symbol: string | string[]) {
+    const cacheKey = `quote_${Array.isArray(symbol) ? symbol.sort().join(',') : symbol}`
     const cachedData = cache.get(cacheKey)
     if (cachedData) {
       return cachedData

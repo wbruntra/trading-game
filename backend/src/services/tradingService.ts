@@ -1,5 +1,6 @@
 import db from '@/config/db'
 import marketDataService from '@/services/marketDataService'
+import { isMarketOpen } from '@/utils/marketHours'
 
 export class TradingService {
   private calculateHoldings(trades: any[]) {
@@ -13,6 +14,7 @@ export class TradingService {
         totalCost: number
         avgPrice: number
         strike: number
+        lastPrice?: number
       }
     >()
 
@@ -75,12 +77,41 @@ export class TradingService {
       tradesByPortfolio.get(trade.portfolio_id)!.push(trade)
     })
 
-    // Attach holdings to each portfolio
-    return portfolios.map((p) => {
+    // Attach holdings to each portfolio and fetch quotes
+    const results = portfolios.map((p) => {
       const pTrades = tradesByPortfolio.get(p.id) || []
       const holdings = this.calculateHoldings(pTrades)
       return { ...p, holdings, trades: pTrades }
     })
+
+    // Batch fetch quotes for all unique holdings across all portfolios
+    const allOptionSymbols = new Set<string>()
+    results.forEach((p) => p.holdings.forEach((h: any) => allOptionSymbols.add(h.optionSymbol)))
+
+    if (allOptionSymbols.size > 0) {
+      try {
+        const quotesArray = await marketDataService.getQuote(Array.from(allOptionSymbols))
+        const quotesMap = new Map(
+          (Array.isArray(quotesArray) ? quotesArray : [quotesArray]).map((q: any) => [
+            q.symbol,
+            q,
+          ]),
+        )
+
+        results.forEach((p) => {
+          p.holdings.forEach((h: any) => {
+            const quote = quotesMap.get(h.optionSymbol)
+            if (quote) {
+              h.lastPrice = quote.regularMarketPrice
+            }
+          })
+        })
+      } catch (error) {
+        console.error('Failed to fetch batch quotes for portfolios:', error)
+      }
+    }
+
+    return results
   }
 
   async getPortfolio(portfolioId: number) {
@@ -90,6 +121,29 @@ export class TradingService {
       .orderBy('timestamp', 'asc')
 
     const holdings = this.calculateHoldings(trades)
+
+    // Fetch quotes for active holdings
+    if (holdings.length > 0) {
+      try {
+        const optionSymbols = holdings.map((h) => h.optionSymbol)
+        const quotesArray = await marketDataService.getQuote(optionSymbols)
+        const quotesMap = new Map(
+          (Array.isArray(quotesArray) ? quotesArray : [quotesArray]).map((q: any) => [
+            q.symbol,
+            q,
+          ]),
+        )
+
+        holdings.forEach((h) => {
+          const quote = quotesMap.get(h.optionSymbol)
+          if (quote) {
+            h.lastPrice = quote.regularMarketPrice
+          }
+        })
+      } catch (error) {
+        console.error(`Failed to fetch quotes for portfolio ${portfolioId}:`, error)
+      }
+    }
 
     return { ...portfolio, trades, holdings }
   }
@@ -105,6 +159,13 @@ export class TradingService {
       quantity: number
     },
   ) {
+    // 0. Enforce Market Hours
+    if (process.env.NODE_ENV !== 'test' && !isMarketOpen()) {
+      throw new Error(
+        'US Markets are currently closed. Trading is only available 9:30 AM - 4:00 PM ET, Mon-Fri.',
+      )
+    }
+
     const trx = await db.transaction()
 
     try {
@@ -118,54 +179,18 @@ export class TradingService {
       }
 
       // 2. Get Real-time Price
-      // In a real app, we'd fetch the specific option price.
-      // For this verified MVP, we will fetch the option chain and find the specific contract.
-      const chain = (await marketDataService.getOptionsChain(tradeDetails.symbol)) as any
-
-      // Flatten options to find the specific contract
-      // Note: yahoo-finance2 structure might require iteration.
-      // For MVP, we'll try to find it or get a quote if possible.
-      // Yahoo Finance option symbols look like AAPL240204C00250000
-
       let price = 0
 
-      // Trying to find price from chain
-      let found = false
-      if (chain.options && chain.options.length > 0) {
-        for (const dateChain of chain.options) {
-          const call = dateChain.calls.find(
-            (c: any) => c.contractSymbol === tradeDetails.optionSymbol,
-          )
-          if (call) {
-            price = call.lastPrice
-            found = true
-            break
-          }
-          const put = dateChain.puts.find(
-            (p: any) => p.contractSymbol === tradeDetails.optionSymbol,
-          )
-          if (put) {
-            price = put.lastPrice
-            found = true
-            break
-          }
-        }
-      }
-
-      // Fallback or Error if price not found
-      // In a real game, maybe we default to a mock price if market is closed/data missing?
-      // But for now strict check.
-      // Actually, let's allow a fallback for testing if checking fails or if we want to simulate
-      if (!found && process.env.NODE_ENV !== 'test') {
-        // Try fetching quote directly for the option symbol if yahoo supports it (it usually does for equity, maybe for options too)
-        try {
-          const quote = (await marketDataService.getQuote(tradeDetails.optionSymbol)) as any
-          price = quote.regularMarketPrice
-        } catch (e) {
+      try {
+        // Fetch quote directly for the option symbol
+        const quote = (await marketDataService.getQuote(tradeDetails.optionSymbol)) as any
+        price = quote.regularMarketPrice
+      } catch (e) {
+        if (process.env.NODE_ENV === 'test') {
+          price = 10.0 // Mock price for testing
+        } else {
           throw new Error(`Could not fetch price for ${tradeDetails.optionSymbol}`)
         }
-      } else if (!found && process.env.NODE_ENV === 'test') {
-        price = 10.0 // Mock price for testing if mocking service isn't enough
       }
 
       const totalCost = price * tradeDetails.quantity * 100 // Options are 100 shares

@@ -6,9 +6,15 @@ const router = Router()
 router.get('/options/:symbol', async (req: Request, res: Response) => {
   try {
     const { symbol } = req.params
-    const { date } = req.query
-    const dateStr = Array.isArray(date) ? date[0] : (date as string)
-    const dateNum = dateStr ? Number(dateStr) : undefined
+    const date = req.query.date
+    let dateNum: number | undefined
+
+    if (typeof date === 'string') {
+      dateNum = Number(date)
+    } else if (Array.isArray(date) && typeof date[0] === 'string') {
+      dateNum = Number(date[0])
+    }
+
     const data = await marketDataService.getOptionsChain(symbol, dateNum)
     res.json(data)
   } catch (error) {

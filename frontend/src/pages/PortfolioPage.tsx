@@ -89,6 +89,56 @@ export default function PortfolioPage() {
                 </button>
               </div>
 
+              {/* Portfolio Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="bg-gray-700/30 p-4 rounded-lg">
+                  <div className="text-sm text-gray-400 mb-1">Total Market Value</div>
+                  <div className="text-2xl font-bold font-mono">
+                    $
+                    {(
+                      portfolio.cash_balance +
+                      (portfolio.holdings?.reduce(
+                        (sum, h) => sum + (h.lastPrice || 0) * h.quantity * 100,
+                        0,
+                      ) || 0)
+                    ).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </div>
+                </div>
+                <div className="bg-gray-700/30 p-4 rounded-lg">
+                  <div className="text-sm text-gray-400 mb-1">Holdings Value</div>
+                  <div className="text-2xl font-bold font-mono text-blue-400">
+                    $
+                    {(
+                      portfolio.holdings?.reduce(
+                        (sum, h) => sum + (h.lastPrice || 0) * h.quantity * 100,
+                        0,
+                      ) || 0
+                    ).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </div>
+                </div>
+                <div className="bg-gray-700/30 p-4 rounded-lg">
+                  <div className="text-sm text-gray-400 mb-1">Total P/L</div>
+                  <div
+                    className={`text-2xl font-bold font-mono ${
+                      (portfolio.holdings?.reduce(
+                        (sum, h) => sum + (h.lastPrice || 0) * h.quantity * 100 - h.totalCost,
+                        0,
+                      ) || 0) >= 0
+                        ? 'text-green-400'
+                        : 'text-red-400'
+                    }`}
+                  >
+                    $
+                    {(
+                      portfolio.holdings?.reduce(
+                        (sum, h) => sum + (h.lastPrice || 0) * h.quantity * 100 - h.totalCost,
+                        0,
+                      ) || 0
+                    ).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </div>
+                </div>
+              </div>
+
               {/* Holdings Table */}
               <h4 className="text-lg font-semibold mb-4 text-gray-300">Current Holdings</h4>
               {!portfolio.holdings || portfolio.holdings.length === 0 ? (
@@ -101,55 +151,89 @@ export default function PortfolioPage() {
                         <th className="py-2">Symbol</th>
                         <th className="py-2">Side</th>
                         <th className="py-2">Contract</th>
-                        <th className="py-2 text-right">Strike</th>
                         <th className="py-2 text-right">Qty</th>
                         <th className="py-2 text-right">Avg Price</th>
-                        <th className="py-2 text-right">Total Cost</th>
+                        <th className="py-2 text-right">Current Price</th>
+                        <th className="py-2 text-right">Market Value</th>
+                        <th className="py-2 text-right">Total P/L</th>
                         <th className="py-2 text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {portfolio.holdings.map((holding) => (
-                        <tr key={holding.optionSymbol} className="border-b border-gray-700/50">
-                          <td className="py-4 font-bold">{holding.symbol}</td>
-                          <td className="py-4">
-                            <span
-                              className={`px-2 py-1 rounded text-xs font-bold ${
-                                holding.side === 'CALL'
-                                  ? 'bg-green-900 text-green-300'
-                                  : 'bg-red-900 text-red-300'
+                      {portfolio.holdings.map((holding) => {
+                        const marketValue = (holding.lastPrice || 0) * holding.quantity * 100
+                        const pl = marketValue - holding.totalCost
+                        const plPct = (pl / holding.totalCost) * 100
+
+                        return (
+                          <tr
+                            key={holding.optionSymbol}
+                            className="border-b border-gray-700/50 hover:bg-gray-700/20 transition-colors"
+                          >
+                            <td className="py-4 font-bold">{holding.symbol}</td>
+                            <td className="py-4">
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-bold ${
+                                  holding.side === 'CALL'
+                                    ? 'bg-green-900 text-green-300'
+                                    : 'bg-red-900 text-red-300'
+                                }`}
+                              >
+                                {holding.side}
+                              </span>
+                            </td>
+                            <td className="py-4 font-mono text-sm">{holding.optionSymbol}</td>
+                            <td className="py-4 text-right font-mono">{holding.quantity}</td>
+                            <td className="py-4 text-right font-mono">
+                              $
+                              {(holding.avgPrice * 100).toLocaleString(undefined, {
+                                maximumFractionDigits: 2,
+                                minimumFractionDigits: 2,
+                              })}
+                            </td>
+                            <td className="py-4 text-right font-mono">
+                              {holding.lastPrice ? (
+                                `$ ${(holding.lastPrice * 100).toLocaleString(undefined, {
+                                  maximumFractionDigits: 2,
+                                  minimumFractionDigits: 2,
+                                })}`
+                              ) : (
+                                <span className="text-gray-600">---</span>
+                              )}
+                            </td>
+                            <td className="py-4 text-right font-mono">
+                              $
+                              {marketValue.toLocaleString(undefined, {
+                                maximumFractionDigits: 0,
+                              })}
+                            </td>
+                            <td
+                              className={`py-4 text-right font-mono font-semibold ${
+                                pl >= 0 ? 'text-green-400' : 'text-red-400'
                               }`}
                             >
-                              {holding.side}
-                            </span>
-                          </td>
-                          <td className="py-4 font-mono text-sm">{holding.optionSymbol}</td>
-                          <td className="py-4 text-right font-mono">
-                            ${holding.strike.toFixed(2)}
-                          </td>
-                          <td className="py-4 text-right font-mono">{holding.quantity}</td>
-                          <td className="py-4 text-right font-mono">
-                            $
-                            {(holding.avgPrice * 100).toLocaleString(undefined, {
-                              maximumFractionDigits: 0,
-                            })}
-                          </td>
-                          <td className="py-4 text-right font-mono text-gray-400">
-                            $
-                            {holding.totalCost.toLocaleString(undefined, {
-                              maximumFractionDigits: 0,
-                            })}
-                          </td>
-                          <td className="py-4 text-right">
-                            <button
-                              onClick={() => handleSellClick(portfolio.id, holding)}
-                              className="px-3 py-1 bg-gray-700 hover:bg-red-600 hover:text-white rounded text-sm transition-colors"
-                            >
-                              Sell
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                              <div>
+                                {pl >= 0 ? '+' : ''}$
+                                {Math.abs(pl).toLocaleString(undefined, {
+                                  maximumFractionDigits: 0,
+                                })}
+                              </div>
+                              <div className="text-xs opacity-80">
+                                {pl >= 0 ? '+' : ''}
+                                {plPct.toFixed(2)}%
+                              </div>
+                            </td>
+                            <td className="py-4 text-right">
+                              <button
+                                onClick={() => handleSellClick(portfolio.id, holding)}
+                                className="px-3 py-1 bg-gray-700 hover:bg-red-600 hover:text-white rounded text-sm transition-colors"
+                              >
+                                Sell
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>

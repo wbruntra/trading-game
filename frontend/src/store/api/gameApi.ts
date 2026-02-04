@@ -38,6 +38,7 @@ export interface Holding {
   totalCost: number
   avgPrice: number
   strike: number
+  lastPrice?: number
 }
 
 export interface Trade {
@@ -55,7 +56,10 @@ export interface Trade {
 export interface OptionsChain {
   symbol: string
   underlyingPrice: number
-  quote?: any
+  quote?: {
+    longName?: string
+    regularMarketPrice?: number
+  }
   expirationDates: string[]
   options: {
     expirationDate: string
