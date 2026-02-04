@@ -2,7 +2,14 @@ import { useState, useEffect, useRef } from 'react'
 import { toast } from 'react-hot-toast'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
-import { useGetOptionsChainQuery, usePlaceTradeMutation } from '@/store/api/gameApi'
+import {
+  useGetOptionsChainQuery,
+  usePlaceTradeMutation,
+  useSaveTradeMutation,
+  useGetSavedTradesQuery,
+  useDeleteSavedTradeMutation,
+  useExecuteSavedTradeMutation,
+} from '@/store/api/gameApi'
 import { useSelector, useDispatch } from 'react-redux'
 import { setActiveCompetition } from '@/store/slices/gameSlice'
 
@@ -42,6 +49,13 @@ export default function TradingPage() {
   )
 
   const [placeTrade] = usePlaceTradeMutation()
+  const [saveTrade] = useSaveTradeMutation()
+  const [deleteSavedTrade] = useDeleteSavedTradeMutation()
+  const [executeSavedTrade] = useExecuteSavedTradeMutation()
+
+  const { data: savedTrades = [] } = useGetSavedTradesQuery(selectedCompetition, {
+    skip: !selectedCompetition,
+  })
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,6 +96,47 @@ export default function TradingPage() {
     }
   }
 
+  const handleSaveForLater = async () => {
+    if (!selectedCompetition || !selectedOption) return
+
+    try {
+      await saveTrade({
+        competitionId: selectedCompetition,
+        trade: {
+          symbol: searchSymbol,
+          optionSymbol: selectedOption.contractSymbol,
+          type: 'BUY',
+          side: tradeSide,
+          quantity,
+          strikePrice: selectedOption.strike,
+          expirationDate: selectedDate!,
+        },
+      }).unwrap()
+      toast.success('Trade saved for later!')
+      setSelectedOption(null)
+    } catch (err: any) {
+      toast.error(`Failed to save trade: ${err.data?.error || 'Unknown error'}`)
+    }
+  }
+
+  const handleExecuteSavedTrade = async (savedTradeId: number) => {
+    try {
+      await executeSavedTrade(savedTradeId).unwrap()
+      toast.success('Trade executed successfully!')
+    } catch (err: any) {
+      toast.error(`Trade failed: ${err.data?.error || 'Unknown error'}`)
+    }
+  }
+
+  const handleDeleteSavedTrade = async (savedTradeId: number) => {
+    try {
+      await deleteSavedTrade(savedTradeId).unwrap()
+      toast.success('Saved trade deleted')
+    } catch (err: any) {
+      toast.error(`Failed to delete: ${err.data?.error || 'Unknown error'}`)
+    }
+  }
+
   const currentPrice =
     optionsChain?.underlyingPrice || optionsChain?.quote?.regularMarketPrice || 0
 
@@ -116,7 +171,7 @@ export default function TradingPage() {
         />
         <button
           type="submit"
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
+          className="px-6 py-2 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95"
         >
           Get Chain
         </button>
@@ -128,9 +183,9 @@ export default function TradingPage() {
       {optionsChain && (
         <div className="grid lg:grid-cols-3 gap-8 h-[calc(100vh-250px)]">
           {/* Options Chain Display */}
-          <div className="lg:col-span-2 bg-gray-800 rounded-xl flex flex-col overflow-hidden">
+          <div className="lg:col-span-2 bg-gray-800 rounded-xl flex flex-col overflow-hidden shadow-xl border border-gray-700/50">
             {/* Header */}
-            <div className="p-6 border-b border-gray-700">
+            <div className="p-6 border-b border-gray-700/50 bg-gradient-to-b from-gray-800 to-gray-800/50">
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h2 className="text-3xl font-bold flex items-baseline gap-3">
@@ -146,23 +201,23 @@ export default function TradingPage() {
               </div>
 
               {/* Call / Put Toggle */}
-              <div className="flex bg-gray-700 p-1 rounded-lg mb-4 w-fit">
+              <div className="flex bg-gray-900/50 p-1 rounded-lg mb-6 w-fit shadow-inner border border-gray-700/50">
                 <button
                   onClick={() => setTradeSide('CALL')}
-                  className={`px-6 py-2 rounded-md font-semibold transition-colors ${
+                  className={`px-6 py-2.5 rounded-md font-semibold transition-all duration-200 ${
                     tradeSide === 'CALL'
-                      ? 'bg-gray-600 text-white shadow'
-                      : 'text-gray-400 hover:text-white'
+                      ? 'bg-gradient-to-br from-green-600 to-green-700 text-white shadow-lg shadow-green-900/30'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
                   }`}
                 >
                   Buy Calls
                 </button>
                 <button
                   onClick={() => setTradeSide('PUT')}
-                  className={`px-6 py-2 rounded-md font-semibold transition-colors ${
+                  className={`px-6 py-2.5 rounded-md font-semibold transition-all duration-200 ${
                     tradeSide === 'PUT'
-                      ? 'bg-gray-600 text-white shadow'
-                      : 'text-gray-400 hover:text-white'
+                      ? 'bg-gradient-to-br from-red-600 to-red-700 text-white shadow-lg shadow-red-900/30'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
                   }`}
                 >
                   Buy Puts
@@ -171,30 +226,32 @@ export default function TradingPage() {
 
               {/* Expiration Tabs */}
               {optionsChain.expirationDates && (
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-600">
-                  {optionsChain.expirationDates.map((date, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        // Convert ISO string to timestamp (seconds) for the API
-                        const timestamp = Math.floor(new Date(date).getTime() / 1000)
-                        setSelectedDate(timestamp)
-                        setSelectedDateIndex(i)
-                        setSelectedOption(null)
-                      }}
-                      className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors font-mono text-sm ${
-                        selectedDateIndex === i
-                          ? 'bg-blue-600 text-white font-semibold'
-                          : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                      }`}
-                    >
-                      {(() => {
-                        const d = new Date(date)
-                        const isCurrentYear = d.getFullYear() === new Date().getFullYear()
-                        return format(d, isCurrentYear ? 'MMM d' : 'MMM d, yyyy')
-                      })()}
-                    </button>
-                  ))}
+                <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-600">
+                  {optionsChain.expirationDates.map((date, i) => {
+                    const d = new Date(date)
+                    const isCurrentYear = d.getFullYear() === new Date().getFullYear()
+                    const isSelected = selectedDateIndex === i
+                    
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          // Convert ISO string to timestamp (seconds) for the API
+                          const timestamp = Math.floor(new Date(date).getTime() / 1000)
+                          setSelectedDate(timestamp)
+                          setSelectedDateIndex(i)
+                          setSelectedOption(null)
+                        }}
+                        className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 text-sm font-medium border ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white border-amber-400/50 shadow-lg shadow-amber-900/50'
+                            : 'bg-gray-800/50 text-gray-300 border-gray-700/50 hover:bg-gray-700/70 hover:border-gray-600 hover:text-white hover:shadow-md'
+                        }`}
+                      >
+                        {format(d, isCurrentYear ? 'MMM d' : 'MMM d, yyyy')}
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -279,7 +336,7 @@ export default function TradingPage() {
           </div>
 
           {/* Trade Form */}
-          <div className="bg-gray-800 p-6 rounded-xl h-fit">
+          <div className="bg-gray-800 p-6 rounded-xl h-fit shadow-xl border border-gray-700/50">
             <h2 className="text-xl font-bold mb-6">Order Ticket</h2>
 
             {!selectedOption ? (
@@ -288,7 +345,7 @@ export default function TradingPage() {
               </div>
             ) : (
               <div className="space-y-6 animate-fadeIn">
-                <div className="p-4 bg-gray-700 rounded-lg border border-gray-600">
+                <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700/50 shadow-inner">
                   <div className="flex justify-between mb-2">
                     <span className="text-gray-400">Contract</span>
                     <span className="font-mono text-sm">{selectedOption.contractSymbol}</span>
@@ -355,12 +412,76 @@ export default function TradingPage() {
                 <button
                   onClick={handleTrade}
                   disabled={!selectedCompetition}
-                  className="w-full py-4 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold text-lg shadow-lg hover:shadow-green-500/20 transition-all"
+                  className="w-full py-4 bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700 rounded-xl font-bold text-lg shadow-lg hover:shadow-green-500/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   Place Order
                 </button>
+
+                <button
+                  onClick={handleSaveForLater}
+                  disabled={!selectedCompetition}
+                  className="w-full py-3 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-semibold transition-all duration-200 border border-gray-600 hover:border-gray-500"
+                >
+                  Save for Later
+                </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Saved Trades Section */}
+      {selectedCompetition && savedTrades.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold mb-4">Saved Trades</h2>
+          <div className="bg-gray-800 rounded-xl p-6 shadow-xl border border-gray-700/50">
+            <div className="space-y-3">
+              {savedTrades.map((trade) => (
+                <div
+                  key={trade.id}
+                  className="flex items-center justify-between p-4 bg-gray-900/50 rounded-lg border border-gray-700/50 hover:border-gray-600 transition-all"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="font-bold text-lg">{trade.symbol}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                          trade.side === 'CALL'
+                            ? 'bg-green-900/50 text-green-400'
+                            : 'bg-red-900/50 text-red-400'
+                        }`}
+                      >
+                        {trade.side}
+                      </span>
+                      <span className="text-gray-400 text-sm">
+                        ${trade.strike_price} •{' '}
+                        {format(new Date(trade.expiration_date * 1000), 'MMM d, yyyy')}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      Qty: {trade.quantity} • {trade.option_symbol}
+                    </div>
+                    {trade.note && (
+                      <div className="text-sm text-gray-500 mt-1 italic">{trade.note}</div>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleExecuteSavedTrade(trade.id)}
+                      className="px-4 py-2 bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 rounded-lg font-semibold text-sm shadow-md transition-all duration-200"
+                    >
+                      Execute
+                    </button>
+                    <button
+                      onClick={() => handleDeleteSavedTrade(trade.id)}
+                      className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 rounded-lg font-semibold text-sm text-red-400 border border-red-600/50 transition-all duration-200"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

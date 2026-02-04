@@ -23,7 +23,7 @@ router.post('/competitions/:competitionId/trade', async (req: AuthRequest, res: 
     // Handle TS potentially viewing params as array, though express usually string
     const compIdString = Array.isArray(competitionId) ? competitionId[0] : competitionId
 
-    const result = await tradingService.placeTrade(userId, compIdString, {
+    const result = await tradingService.placeTrade(userId, Number(compIdString), {
       symbol,
       optionSymbol,
       type,
@@ -51,7 +51,7 @@ router.get('/portfolios/:portfolioId', async (req: AuthRequest, res: Response) =
   try {
     const { portfolioId } = req.params
     const pIdString = Array.isArray(portfolioId) ? portfolioId[0] : portfolioId
-    const portfolio = await tradingService.getPortfolio(pIdString)
+    const portfolio = await tradingService.getPortfolio(Number(pIdString))
 
     if (!portfolio) {
       return res.status(404).json({ error: 'Portfolio not found' })
@@ -76,6 +76,78 @@ router.get('/competitions/:competitionId/leaderboard', async (req: AuthRequest, 
     res.json(leaderboard)
   } catch (error: any) {
     res.status(500).json({ error: error.message })
+  }
+})
+
+// Saved Trades Routes
+router.post('/competitions/:competitionId/saved-trades', async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user.id
+    const { competitionId } = req.params
+    const { symbol, optionSymbol, type, side, quantity, strikePrice, expirationDate, note } = req.body
+
+    if (!symbol || !optionSymbol || !type || !side || !quantity || strikePrice === undefined || !expirationDate) {
+      return res.status(400).json({ error: 'Missing required fields' })
+    }
+
+    if (type !== 'BUY' && type !== 'SELL') return res.status(400).json({ error: 'Invalid type' })
+    if (side !== 'CALL' && side !== 'PUT') return res.status(400).json({ error: 'Invalid side' })
+
+    const compIdString = Array.isArray(competitionId) ? competitionId[0] : competitionId
+
+    const savedTrade = await tradingService.saveTrade(userId, Number(compIdString), {
+      symbol,
+      optionSymbol,
+      type,
+      side,
+      quantity: Number(quantity),
+      strikePrice: Number(strikePrice),
+      expirationDate: Number(expirationDate),
+      note: note || null,
+    })
+
+    res.status(201).json(savedTrade)
+  } catch (error: any) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
+router.get('/competitions/:competitionId/saved-trades', async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user.id
+    const { competitionId } = req.params
+    const compIdString = Array.isArray(competitionId) ? competitionId[0] : competitionId
+
+    const savedTrades = await tradingService.getSavedTrades(userId, Number(compIdString))
+    res.json(savedTrades)
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+router.delete('/saved-trades/:savedTradeId', async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user.id
+    const { savedTradeId } = req.params
+    const savedTradeIdString = Array.isArray(savedTradeId) ? savedTradeId[0] : savedTradeId
+
+    await tradingService.deleteSavedTrade(userId, Number(savedTradeIdString))
+    res.status(204).send()
+  } catch (error: any) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
+router.post('/saved-trades/:savedTradeId/execute', async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user.id
+    const { savedTradeId } = req.params
+    const savedTradeIdString = Array.isArray(savedTradeId) ? savedTradeId[0] : savedTradeId
+
+    const result = await tradingService.executeSavedTrade(userId, Number(savedTradeIdString))
+    res.status(200).json(result)
+  } catch (error: any) {
+    res.status(400).json({ error: error.message })
   }
 })
 

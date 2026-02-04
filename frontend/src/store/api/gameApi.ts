@@ -94,6 +94,31 @@ export interface TradeRequest {
   quantity: number
 }
 
+export interface SavedTrade {
+  id: number
+  portfolio_id: number
+  symbol: string
+  option_symbol: string
+  type: 'BUY' | 'SELL'
+  side: 'CALL' | 'PUT'
+  quantity: number
+  strike_price: number
+  expiration_date: number
+  note: string | null
+  created_at: string
+}
+
+export interface SaveTradeRequest {
+  symbol: string
+  optionSymbol: string
+  type: 'BUY' | 'SELL'
+  side: 'CALL' | 'PUT'
+  quantity: number
+  strikePrice: number
+  expirationDate: number
+  note?: string
+}
+
 export const gameApi = createApi({
   reducerPath: 'gameApi',
   baseQuery: fetchBaseQuery({
@@ -106,7 +131,7 @@ export const gameApi = createApi({
       return headers
     },
   }),
-  tagTypes: ['Competition', 'Portfolio'],
+  tagTypes: ['Competition', 'Portfolio', 'SavedTrade'],
   endpoints: (builder) => ({
     // Competitions
     getCompetitions: builder.query<Competition[], void>({
@@ -174,6 +199,37 @@ export const gameApi = createApi({
         { type: 'Portfolio', id: `LEADERBOARD_${competitionId}` },
       ],
     }),
+
+    // Saved Trades
+    saveTrade: builder.mutation<
+      SavedTrade,
+      { competitionId: string; trade: SaveTradeRequest }
+    >({
+      query: ({ competitionId, trade }) => ({
+        url: `/trading/competitions/${competitionId}/saved-trades`,
+        method: 'POST',
+        body: trade,
+      }),
+      invalidatesTags: ['SavedTrade'],
+    }),
+    getSavedTrades: builder.query<SavedTrade[], string>({
+      query: (competitionId) => `/trading/competitions/${competitionId}/saved-trades`,
+      providesTags: ['SavedTrade'],
+    }),
+    deleteSavedTrade: builder.mutation<void, number>({
+      query: (savedTradeId) => ({
+        url: `/trading/saved-trades/${savedTradeId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['SavedTrade'],
+    }),
+    executeSavedTrade: builder.mutation<{ trade: Trade; newBalance: number }, number>({
+      query: (savedTradeId) => ({
+        url: `/trading/saved-trades/${savedTradeId}/execute`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['SavedTrade', 'Portfolio'],
+    }),
   }),
 })
 
@@ -187,4 +243,8 @@ export const {
   useGetMyPortfoliosQuery,
   usePlaceTradeMutation,
   useGetLeaderboardQuery,
+  useSaveTradeMutation,
+  useGetSavedTradesQuery,
+  useDeleteSavedTradeMutation,
+  useExecuteSavedTradeMutation,
 } = gameApi

@@ -354,6 +354,106 @@ export class TradingService {
       throw error
     }
   }
+
+  async saveTrade(
+    userId: number,
+    competitionId: number,
+    tradeDetails: {
+      symbol: string
+      optionSymbol: string
+      type: 'BUY' | 'SELL'
+      side: 'CALL' | 'PUT'
+      quantity: number
+      strikePrice: number
+      expirationDate: number
+      note: string | null
+    },
+  ) {
+    // Validate portfolio access
+    const portfolio = await db('portfolios')
+      .where({ user_id: userId, competition_id: competitionId })
+      .first()
+
+    if (!portfolio) {
+      throw new Error('Portfolio not found or user not in competition')
+    }
+
+    // Save the trade
+    const [savedTrade] = await db('saved_trades')
+      .insert({
+        portfolio_id: portfolio.id,
+        symbol: tradeDetails.symbol,
+        option_symbol: tradeDetails.optionSymbol,
+        type: tradeDetails.type,
+        side: tradeDetails.side,
+        quantity: tradeDetails.quantity,
+        strike_price: tradeDetails.strikePrice,
+        expiration_date: tradeDetails.expirationDate,
+        note: tradeDetails.note,
+      })
+      .returning('*')
+
+    return savedTrade
+  }
+
+  async getSavedTrades(userId: number, competitionId: number) {
+    // Get portfolio for this user and competition
+    const portfolio = await db('portfolios')
+      .where({ user_id: userId, competition_id: competitionId })
+      .first()
+
+    if (!portfolio) {
+      return []
+    }
+
+    // Fetch saved trades
+    const savedTrades = await db('saved_trades')
+      .where({ portfolio_id: portfolio.id })
+      .orderBy('created_at', 'desc')
+
+    return savedTrades
+  }
+
+  async deleteSavedTrade(userId: number, savedTradeId: number) {
+    // Verify ownership
+    const savedTrade = await db('saved_trades')
+      .join('portfolios', 'saved_trades.portfolio_id', 'portfolios.id')
+      .where({ 'saved_trades.id': savedTradeId, 'portfolios.user_id': userId })
+      .first()
+
+    if (!savedTrade) {
+      throw new Error('Saved trade not found or unauthorized')
+    }
+
+    await db('saved_trades').where({ id: savedTradeId }).delete()
+  }
+
+  async executeSavedTrade(userId: number, savedTradeId: number) {
+    // Fetch saved trade with ownership check
+    const savedTrade = await db('saved_trades')
+      .join('portfolios', 'saved_trades.portfolio_id', 'portfolios.id')
+      .where({ 'saved_trades.id': savedTradeId, 'portfolios.user_id': userId })
+      .select('saved_trades.*', 'portfolios.competition_id')
+      .first()
+
+    if (!savedTrade) {
+      throw new Error('Saved trade not found or unauthorized')
+    }
+
+    // Execute the trade using existing placeTrade logic
+    const result = await this.placeTrade(userId, savedTrade.competition_id, {
+      symbol: savedTrade.symbol,
+      optionSymbol: savedTrade.option_symbol,
+      type: savedTrade.type,
+      side: savedTrade.side,
+      quantity: savedTrade.quantity,
+    })
+
+    // Delete the saved trade after successful execution
+    await db('saved_trades').where({ id: savedTradeId }).delete()
+
+    return result
+  }
 }
 
 export default new TradingService()
