@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import authService from '../services/authService'
+import { authenticateToken } from '../middleware/authMiddleware'
 
 const router = Router()
 
@@ -24,6 +25,12 @@ router.post('/login', async (req: Request, res: Response) => {
   } catch (error: any) {
     res.status(401).json({ error: error.message })
   }
+})
+
+router.get('/status', authenticateToken, (req: Request, res: Response) => {
+  // If middleware passes, user is authenticated
+  // req.user is populated by middleware
+  res.json({ user: (req as any).user })
 })
 
 export default router

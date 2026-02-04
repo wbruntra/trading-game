@@ -52,7 +52,10 @@ export const authApi = createApi({
         body: credentials,
       }),
     }),
+    getStatus: builder.query<{ user: User }, void>({
+      query: () => '/status',
+    }),
   }),
 })
 
-export const { useLoginMutation, useRegisterMutation } = authApi
+export const { useLoginMutation, useRegisterMutation, useGetStatusQuery } = authApi
