@@ -13,6 +13,7 @@ export default function CompetitionsPage() {
   const { data: competitions, isLoading } = useGetCompetitionsQuery()
   const [createCompetition] = useCreateCompetitionMutation()
   const [joinCompetition] = useJoinCompetitionMutation()
+  const { data: myPortfolios } = useGetMyPortfoliosQuery()
   const navigate = useNavigate()
   const dispatch = useDispatch()
 
@@ -38,12 +39,17 @@ export default function CompetitionsPage() {
 
   const handleJoin = async (id: number) => {
     try {
-      await joinCompetition(id).unwrap()
+      await joinCompetition(id.toString()).unwrap()
       dispatch(setActiveCompetition(id.toString()))
       navigate('/portfolio')
     } catch (err) {
       console.error('Failed to join', err)
     }
+  }
+
+  const handleSwitch = (id: number) => {
+    dispatch(setActiveCompetition(id.toString()))
+    navigate('/portfolio')
   }
 
   if (isLoading) return <div className="p-8">Loading...</div>

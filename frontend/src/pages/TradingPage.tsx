@@ -1,11 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
-import {
-  useGetOptionsChainQuery,
-  usePlaceTradeMutation,
-  useGetCompetitionsQuery,
-} from '@/store/api/gameApi'
+import { useGetOptionsChainQuery, usePlaceTradeMutation } from '@/store/api/gameApi'
 import { useSelector, useDispatch } from 'react-redux'
 import { setActiveCompetition } from '@/store/slices/gameSlice'
 
@@ -29,6 +25,27 @@ export default function TradingPage() {
   const [selectedDate, setSelectedDate] = useState<number | undefined>(undefined)
   const [selectedDateIndex, setSelectedDateIndex] = useState(0)
   const [tradeSide, setTradeSide] = useState<'CALL' | 'PUT'>('CALL')
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const {
+    data: optionsChain,
+    isLoading,
+    error,
+  } = useGetOptionsChainQuery(
+    {
+      symbol: searchSymbol,
+      date: selectedDate,
+    },
+    { skip: !searchSymbol },
+  )
+
+  const [placeTrade] = usePlaceTradeMutation()
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    setSearchSymbol(symbol)
+  }
 
   useEffect(() => {
     if (urlCompetitionId) {

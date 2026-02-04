@@ -11,7 +11,7 @@ export default function PortfolioPage() {
 
     try {
       await placeTrade({
-        competitionId: portfolios?.find((p) => p.id === portfolioId)?.competition_id!,
+        competitionId: portfolios?.find((p) => p.id === portfolioId)?.competition_id.toString()!,
         trade: {
           symbol: holding.symbol,
           optionSymbol: holding.optionSymbol,

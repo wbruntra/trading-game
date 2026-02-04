@@ -1,5 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { RootState } from '../index'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import type { RootState } from '../index'
 
 interface GameState {
   activeCompetitionId: string | null
