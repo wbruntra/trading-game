@@ -56,23 +56,23 @@ export default function CompetitionsPage() {
     navigate('/portfolio')
   }
 
-  if (isLoading) return <div className="p-8">Loading...</div>
+  if (isLoading) return <div className="p-4 sm:p-8">Loading...</div>
 
   return (
-    <div className="min-h-screen p-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Competitions</h1>
+    <div className="min-h-screen p-4 sm:p-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold">Competitions</h1>
         <button
           onClick={() => setShowCreate(!showCreate)}
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
+          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold w-full sm:w-auto"
         >
           {showCreate ? 'Cancel' : 'Create New'}
         </button>
       </div>
 
       {showCreate && (
-        <div className="mb-8 p-6 bg-gray-800 rounded-xl">
-          <h2 className="text-xl font-bold mb-4">Create Competition</h2>
+        <div className="mb-6 sm:mb-8 p-4 sm:p-6 bg-gray-800 rounded-xl">
+          <h2 className="text-lg sm:text-xl font-bold mb-4">Create Competition</h2>
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
               <label className="block text-sm text-gray-400 mb-1">Name</label>

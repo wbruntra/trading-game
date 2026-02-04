@@ -157,17 +157,17 @@ export default function TradingPage() {
   const insertIndex = sortedOptions.findIndex((opt) => opt.strike < currentPrice)
 
   return (
-    <div className="min-h-screen p-8 bg-gray-900 text-white">
-      <h1 className="text-3xl font-bold mb-8">Trade Options</h1>
+    <div className="min-h-screen p-4 sm:p-8 bg-gray-900 text-white">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Trade Options</h1>
 
       {/* Search */}
-      <form onSubmit={handleSearch} className="flex gap-4 mb-8">
+      <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4 mb-6 sm:mb-8">
         <input
           type="text"
           value={symbol}
           onChange={(e) => setSymbol(e.target.value.toUpperCase())}
           placeholder="Enter Stock Symbol (e.g. SPY)"
-          className="flex-1 max-w-md px-4 py-2 bg-gray-800 rounded-lg border border-gray-700 font-mono text-lg text-white placeholder-gray-500"
+          className="flex-1 max-w-full sm:max-w-md px-4 py-2 bg-gray-800 rounded-lg border border-gray-700 font-mono text-lg text-white placeholder-gray-500"
         />
         <button
           type="submit"
@@ -181,30 +181,32 @@ export default function TradingPage() {
       {error && <div className="text-red-400">Failed to load options chain</div>}
 
       {optionsChain && (
-        <div className="grid lg:grid-cols-3 gap-8 h-[calc(100vh-250px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 h-auto lg:h-[calc(100vh-250px)]">
           {/* Options Chain Display */}
           <div className="lg:col-span-2 bg-gray-800 rounded-xl flex flex-col overflow-hidden shadow-xl border border-gray-700/50">
             {/* Header */}
-            <div className="p-6 border-b border-gray-700/50 bg-gradient-to-b from-gray-800 to-gray-800/50">
-              <div className="flex justify-between items-center mb-6">
+            <div className="p-4 sm:p-6 border-b border-gray-700/50 bg-gradient-to-b from-gray-800 to-gray-800/50">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 gap-3">
                 <div>
-                  <h2 className="text-3xl font-bold flex items-baseline gap-3">
+                  <h2 className="text-2xl sm:text-3xl font-bold flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3">
                     {optionsChain.symbol}
                     {optionsChain.quote?.longName && (
-                      <span className="text-lg font-normal text-gray-400">
+                      <span className="text-base sm:text-lg font-normal text-gray-400">
                         {optionsChain.quote.longName}
                       </span>
                     )}
                   </h2>
                 </div>
-                <div className="text-3xl font-mono text-green-400">${currentPrice.toFixed(2)}</div>
+                <div className="text-2xl sm:text-3xl font-mono text-green-400">
+                  ${currentPrice.toFixed(2)}
+                </div>
               </div>
 
               {/* Call / Put Toggle */}
-              <div className="flex bg-gray-900/50 p-1 rounded-lg mb-6 w-fit shadow-inner border border-gray-700/50">
+              <div className="flex bg-gray-900/50 p-1 rounded-lg mb-6 w-full sm:w-fit shadow-inner border border-gray-700/50">
                 <button
                   onClick={() => setTradeSide('CALL')}
-                  className={`px-6 py-2.5 rounded-md font-semibold transition-all duration-200 ${
+                  className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-md font-semibold transition-all duration-200 ${
                     tradeSide === 'CALL'
                       ? 'bg-gradient-to-br from-green-600 to-green-700 text-white shadow-lg shadow-green-900/30'
                       : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
@@ -214,7 +216,7 @@ export default function TradingPage() {
                 </button>
                 <button
                   onClick={() => setTradeSide('PUT')}
-                  className={`px-6 py-2.5 rounded-md font-semibold transition-all duration-200 ${
+                  className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-md font-semibold transition-all duration-200 ${
                     tradeSide === 'PUT'
                       ? 'bg-gradient-to-br from-red-600 to-red-700 text-white shadow-lg shadow-red-900/30'
                       : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
@@ -257,13 +259,16 @@ export default function TradingPage() {
             </div>
 
             {/* Scrollable List */}
-            <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 max-h-[50vh] lg:max-h-none" ref={scrollRef}>
               <div className="space-y-1">
-                <div className="grid grid-cols-4 text-xs font-semibold text-gray-500 px-4 mb-2 uppercase tracking-wide">
-                  <span>Strike Price</span>
+                <div className="grid grid-cols-4 text-xs font-semibold text-gray-500 px-3 sm:px-4 mb-2 uppercase tracking-wide">
+                  <span className="hidden sm:block">Strike Price</span>
+                  <span className="sm:hidden">Strike</span>
                   <span className="text-right">Price</span>
-                  <span className="text-right">% Change</span>
-                  <span className="text-right">To Break Even</span>
+                  <span className="text-right hidden sm:block">% Change</span>
+                  <span className="text-right sm:hidden">%</span>
+                  <span className="text-right hidden sm:block">To Break Even</span>
+                  <span className="text-right sm:hidden">B/E</span>
                 </div>
 
                 {sortedOptions.map((opt, index) => {
@@ -297,13 +302,15 @@ export default function TradingPage() {
                       )}
                       <div
                         onClick={() => setSelectedOption(opt)}
-                        className={`grid grid-cols-4 p-4 rounded-lg cursor-pointer text-sm transition-all border border-transparent ${
+                        className={`grid grid-cols-4 p-3 sm:p-4 rounded-lg cursor-pointer text-xs sm:text-sm transition-all border border-transparent ${
                           isSelected
                             ? 'bg-blue-600/20 border-blue-500 shadow-lg relative z-10'
                             : 'hover:bg-gray-700'
                         }`}
                       >
-                        <span className="font-mono font-bold text-white">${opt.strike}</span>
+                        <span className="font-mono font-bold text-white text-sm sm:text-base">
+                          ${opt.strike}
+                        </span>
                         <span
                           className={`text-right font-mono ${
                             isSelected
@@ -432,17 +439,17 @@ export default function TradingPage() {
 
       {/* Saved Trades Section */}
       {selectedCompetition && savedTrades.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold mb-4">Saved Trades</h2>
-          <div className="bg-gray-800 rounded-xl p-6 shadow-xl border border-gray-700/50">
+        <div className="mt-6 sm:mt-8">
+          <h2 className="text-xl sm:text-2xl font-bold mb-4">Saved Trades</h2>
+          <div className="bg-gray-800 rounded-xl p-4 sm:p-6 shadow-xl border border-gray-700/50">
             <div className="space-y-3">
               {savedTrades.map((trade) => (
                 <div
                   key={trade.id}
-                  className="flex items-center justify-between p-4 bg-gray-900/50 rounded-lg border border-gray-700/50 hover:border-gray-600 transition-all"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-900/50 rounded-lg border border-gray-700/50 hover:border-gray-600 transition-all gap-3"
                 >
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
                       <span className="font-bold text-lg">{trade.symbol}</span>
                       <span
                         className={`px-2 py-0.5 rounded text-xs font-semibold ${
@@ -465,16 +472,16 @@ export default function TradingPage() {
                       <div className="text-sm text-gray-500 mt-1 italic">{trade.note}</div>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 sm:flex-row">
                     <button
                       onClick={() => handleExecuteSavedTrade(trade.id)}
-                      className="px-4 py-2 bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 rounded-lg font-semibold text-sm shadow-md transition-all duration-200"
+                      className="flex-1 sm:flex-none px-4 py-2 bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 rounded-lg font-semibold text-sm shadow-md transition-all duration-200"
                     >
                       Execute
                     </button>
                     <button
                       onClick={() => handleDeleteSavedTrade(trade.id)}
-                      className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 rounded-lg font-semibold text-sm text-red-400 border border-red-600/50 transition-all duration-200"
+                      className="flex-1 sm:flex-none px-4 py-2 bg-red-600/20 hover:bg-red-600/30 rounded-lg font-semibold text-sm text-red-400 border border-red-600/50 transition-all duration-200"
                     >
                       Delete
                     </button>
