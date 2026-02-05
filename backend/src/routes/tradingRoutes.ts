@@ -184,4 +184,64 @@ router.post('/saved-trades/:savedTradeId/execute', async (req: AuthRequest, res:
   }
 })
 
+router.post(
+  '/competitions/:competitionId/spread-trade',
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user.id
+      const { competitionId } = req.params
+      const { symbol, spreadType, longLeg, shortLeg, quantity } = req.body
+
+      if (
+        !symbol ||
+        !spreadType ||
+        !longLeg ||
+        !shortLeg ||
+        !quantity ||
+        !longLeg.optionSymbol ||
+        !shortLeg.optionSymbol
+      ) {
+        return res.status(400).json({ error: 'Missing required fields' })
+      }
+
+      if (spreadType !== 'CALL_DEBIT' && spreadType !== 'PUT_DEBIT') {
+        return res.status(400).json({ error: 'Invalid spread type' })
+      }
+
+      const compIdString = Array.isArray(competitionId) ? competitionId[0] : competitionId
+
+      const result = await tradingService.placeSpreadTrade(userId, Number(compIdString), {
+        symbol,
+        spreadType,
+        longLeg: {
+          optionSymbol: longLeg.optionSymbol,
+          strike: Number(longLeg.strike),
+        },
+        shortLeg: {
+          optionSymbol: shortLeg.optionSymbol,
+          strike: Number(shortLeg.strike),
+        },
+        quantity: Number(quantity),
+      })
+
+      res.status(200).json(result)
+    } catch (error: any) {
+      res.status(400).json({ error: error.message })
+    }
+  },
+)
+
+router.post('/spread/:spreadId/close', async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user.id
+    const { spreadId } = req.params
+    const spreadIdString = Array.isArray(spreadId) ? spreadId[0] : spreadId
+
+    const result = await tradingService.closeSpreadTrade(userId, spreadIdString)
+    res.status(200).json(result)
+  } catch (error: any) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
 export default router

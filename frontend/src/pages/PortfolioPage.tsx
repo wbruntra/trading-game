@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import { useGetPortfolioByCompetitionQuery, usePlaceTradeMutation } from '@/store/api/gameApi'
+import {
+  useGetPortfolioByCompetitionQuery,
+  usePlaceTradeMutation,
+  useCloseSpreadMutation,
+} from '@/store/api/gameApi'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import { ConfirmationModal } from '@/components/ConfirmationModal'
@@ -15,6 +19,7 @@ export default function PortfolioPage() {
     pollingInterval: 30000, // Refresh every 30 seconds
   })
   const [placeTrade] = usePlaceTradeMutation()
+  const [closeSpread] = useCloseSpreadMutation()
   const navigate = useNavigate()
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -29,19 +34,27 @@ export default function PortfolioPage() {
     if (!selectedHolding || !portfolio || !activeCompetitionId) return
 
     try {
-      await placeTrade({
-        competitionId: activeCompetitionId,
-        trade: {
-          symbol: selectedHolding.symbol,
-          optionSymbol: selectedHolding.optionSymbol,
-          type: 'SELL',
-          side: selectedHolding.side,
-          quantity: selectedHolding.quantity,
-        },
-      }).unwrap()
-      toast.success('Sold successfully!')
+      if (selectedHolding.spreadId) {
+        await closeSpread({
+          spreadId: selectedHolding.spreadId,
+        }).unwrap()
+        toast.success('Spread closed successfully!')
+      } else {
+        await placeTrade({
+          competitionId: activeCompetitionId,
+          trade: {
+            symbol: selectedHolding.symbol,
+            optionSymbol: selectedHolding.optionSymbol,
+            type: 'SELL',
+            side: selectedHolding.side,
+            quantity: selectedHolding.quantity,
+          },
+        }).unwrap()
+        toast.success('Sold successfully!')
+      }
+      setModalOpen(false)
     } catch (err: any) {
-      toast.error(`Failed to sell: ${err.data?.error || err.message}`)
+      toast.error(`Failed to close position: ${err.data?.error || err.message}`)
     }
   }
 

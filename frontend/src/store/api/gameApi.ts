@@ -41,6 +41,20 @@ export interface Holding {
   expirationDate: string
   lastPrice?: number
   underlyingPrice?: number
+  spreadId?: string
+  spreadType?: 'CALL_DEBIT' | 'PUT_DEBIT'
+  longLeg?: {
+    optionSymbol: string
+    strike: number
+    lastPrice?: number
+    avgPrice: number
+  }
+  shortLeg?: {
+    optionSymbol: string
+    strike: number
+    lastPrice?: number
+    avgPrice: number
+  }
 }
 
 export interface Trade {
@@ -86,6 +100,20 @@ export interface LeaderboardEntry {
   total_value: number
   cash_balance: number
   last_updated_at: string
+}
+
+export interface PlaceSpreadTradeRequest {
+  symbol: string
+  spreadType: 'CALL_DEBIT' | 'PUT_DEBIT'
+  longLeg: {
+    optionSymbol: string
+    strike: number
+  }
+  shortLeg: {
+    optionSymbol: string
+    strike: number
+  }
+  quantity: number
 }
 
 export interface TradeRequest {
@@ -235,6 +263,27 @@ export const gameApi = createApi({
       }),
       invalidatesTags: ['SavedTrade', 'Portfolio'],
     }),
+    placeSpreadTrade: builder.mutation<
+      { spreadId: string; netDebit: number; newTotalValue: number },
+      { competitionId: string; trade: PlaceSpreadTradeRequest }
+    >({
+      query: ({ competitionId, trade }) => ({
+        url: `/trading/competitions/${competitionId}/spread-trade`,
+        method: 'POST',
+        body: trade,
+      }),
+      invalidatesTags: ['Portfolio'],
+    }),
+    closeSpread: builder.mutation<
+      { netCredit: number; newTotalValue: number },
+      { spreadId: string }
+    >({
+      query: ({ spreadId }) => ({
+        url: `/trading/spread/${spreadId}/close`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Portfolio'],
+    }),
   }),
 })
 
@@ -253,4 +302,6 @@ export const {
   useGetSavedTradesQuery,
   useDeleteSavedTradeMutation,
   useExecuteSavedTradeMutation,
+  usePlaceSpreadTradeMutation,
+  useCloseSpreadMutation,
 } = gameApi

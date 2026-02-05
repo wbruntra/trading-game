@@ -9,6 +9,7 @@ import {
   useGetSavedTradesQuery,
   useDeleteSavedTradeMutation,
   useExecuteSavedTradeMutation,
+  usePlaceSpreadTradeMutation,
 } from '@/store/api/gameApi'
 import { useSelector } from 'react-redux'
 import type { RootState } from '@/store'
@@ -25,6 +26,8 @@ export default function TradingPage() {
   const [selectedDate, setSelectedDate] = useState<number | undefined>(undefined)
   const [selectedDateIndex, setSelectedDateIndex] = useState(0)
   const [tradeSide, setTradeSide] = useState<'CALL' | 'PUT'>('CALL')
+  const [spreadMode, setSpreadMode] = useState(false)
+  const [spreadLegs, setSpreadLegs] = useState<any[]>([])
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -41,6 +44,7 @@ export default function TradingPage() {
   )
 
   const [placeTrade] = usePlaceTradeMutation()
+  const [placeSpreadTrade] = usePlaceSpreadTradeMutation()
   const [saveTrade] = useSaveTradeMutation()
   const [deleteSavedTrade] = useDeleteSavedTradeMutation()
   const [executeSavedTrade] = useExecuteSavedTradeMutation()
@@ -57,23 +61,67 @@ export default function TradingPage() {
   // ... (existing code)
 
   const handleTrade = async () => {
-    if (!activeCompetitionId || !selectedOption) return
+    if (!activeCompetitionId) return
 
-    try {
-      await placeTrade({
-        competitionId: activeCompetitionId,
-        trade: {
-          symbol: searchSymbol,
-          optionSymbol: selectedOption.contractSymbol,
-          type: 'BUY',
-          side: tradeSide,
-          quantity,
-        },
-      }).unwrap()
-      toast.success('Trade placed successfully!')
-      navigate('/portfolio')
-    } catch (err: any) {
-      toast.error(`Trade failed: ${err.data?.error || 'Unknown error'}`)
+    if (spreadMode) {
+      if (spreadLegs.length !== 2) return
+      // Validation
+      const legs = [...spreadLegs].sort((a, b) => a.strike - b.strike)
+      // Call Debit: Buy Low Strike, Sell High Strike
+      // Put Debit: Buy High Strike, Sell Low Strike
+
+      let longLeg, shortLeg
+
+      if (tradeSide === 'CALL') {
+        // Debit Call Spread: Long Lower Strike, Short Higher Strike
+        longLeg = legs[0]
+        shortLeg = legs[1]
+      } else {
+        // Debit Put Spread: Long Higher Strike, Short Lower Strike
+        longLeg = legs[1]
+        shortLeg = legs[0]
+      }
+
+      try {
+        await placeSpreadTrade({
+          competitionId: activeCompetitionId,
+          trade: {
+            symbol: searchSymbol,
+            spreadType: tradeSide === 'CALL' ? 'CALL_DEBIT' : 'PUT_DEBIT',
+            longLeg: {
+              optionSymbol: longLeg.contractSymbol,
+              strike: longLeg.strike,
+            },
+            shortLeg: {
+              optionSymbol: shortLeg.contractSymbol,
+              strike: shortLeg.strike,
+            },
+            quantity,
+          },
+        }).unwrap()
+        toast.success('Spread trade placed!')
+        navigate('/portfolio')
+      } catch (err: any) {
+        toast.error(`Spread trade failed: ${err.data?.error || err.message}`)
+      }
+    } else {
+      if (!selectedOption) return
+      try {
+        await placeTrade({
+          competitionId: activeCompetitionId,
+          trade: {
+            symbol: searchSymbol,
+            optionSymbol: selectedOption.contractSymbol,
+            type: 'BUY',
+            side: tradeSide,
+            quantity,
+          },
+        }).unwrap()
+        toast.success('Trade placed successfully!')
+        navigate('/portfolio')
+      } catch (err: any) {
+        toast.error(`Trade failed: ${err.data?.error || 'Unknown error'}`)
+      }
     }
   }
 
@@ -207,6 +255,43 @@ export default function TradingPage() {
                 </button>
               </div>
 
+              {/* Spread Mode Toggle */}
+              <div className="flex items-center gap-3 mb-6 bg-gray-900/40 p-3 rounded-lg border border-gray-700/30">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-sm text-gray-300">Strategy Mode</h3>
+                  <div className="flex mt-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setSpreadMode(false)
+                        setSpreadLegs([])
+                        setSelectedOption(null)
+                      }}
+                      className={`flex-1 py-1.5 px-3 rounded text-sm font-medium transition-colors ${
+                        !spreadMode
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                      }`}
+                    >
+                      Single Option
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSpreadMode(true)
+                        setSpreadLegs([])
+                        setSelectedOption(null)
+                      }}
+                      className={`flex-1 py-1.5 px-3 rounded text-sm font-medium transition-colors ${
+                        spreadMode
+                          ? 'bg-purple-600 text-white shadow-md'
+                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                      }`}
+                    >
+                      Debit Spread
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Expiration Tabs */}
               {optionsChain.expirationDates && (
                 <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-600">
@@ -285,9 +370,34 @@ export default function TradingPage() {
                         </div>
                       )}
                       <div
-                        onClick={() => setSelectedOption(opt)}
+                        onClick={() => {
+                          if (spreadMode) {
+                            // Toggle selection
+                            const exists = spreadLegs.find(
+                              (l) => l.contractSymbol === opt.contractSymbol,
+                            )
+                            if (exists) {
+                              setSpreadLegs(
+                                spreadLegs.filter((l) => l.contractSymbol !== opt.contractSymbol),
+                              )
+                            } else {
+                              if (spreadLegs.length < 2) {
+                                setSpreadLegs([...spreadLegs, opt])
+                              } else {
+                                // If 2 already selected, replace the oldest? Or create error?
+                                // Let's simplify: replace the first one if 2 selected? No, confusing.
+                                // Just prevent > 2
+                                toast('Max 2 legs for spread', { icon: '⚠️' })
+                              }
+                            }
+                          } else {
+                            setSelectedOption(opt)
+                          }
+                        }}
                         className={`grid grid-cols-4 p-3 sm:p-4 rounded-lg cursor-pointer text-xs sm:text-sm transition-all border border-transparent ${
-                          isSelected
+                          (spreadMode &&
+                            spreadLegs.find((l) => l.contractSymbol === opt.contractSymbol)) ||
+                          (!spreadMode && selectedOption?.contractSymbol === opt.contractSymbol)
                             ? 'bg-blue-600/20 border-blue-500 shadow-lg relative z-10'
                             : 'hover:bg-gray-700'
                         }`}
@@ -330,37 +440,71 @@ export default function TradingPage() {
           <div className="bg-gray-800 p-6 rounded-xl h-fit shadow-xl border border-gray-700/50">
             <h2 className="text-xl font-bold mb-6">Order Ticket</h2>
 
-            {!selectedOption ? (
+            {(!selectedOption && !spreadMode) || (spreadMode && spreadLegs.length < 2) ? (
               <div className="text-center py-12 text-gray-500">
-                <p>Select an option to view details</p>
+                <p>
+                  {spreadMode
+                    ? `Select 2 legs (${spreadLegs.length}/2 selected)`
+                    : 'Select an option to view details'}
+                </p>
               </div>
             ) : (
               <div className="space-y-6 animate-fadeIn">
                 <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700/50 shadow-inner">
                   <div className="flex justify-between mb-2">
                     <span className="text-gray-400">Contract</span>
-                    <span className="font-mono text-sm">{selectedOption.contractSymbol}</span>
-                  </div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-400">Break Even</span>
-                    <span className="font-mono">
-                      $
-                      {(tradeSide === 'CALL'
-                        ? selectedOption.strike + selectedOption.lastPrice
-                        : selectedOption.strike - selectedOption.lastPrice
-                      ).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                    <span className="font-mono text-sm">
+                      {spreadMode ? `${tradeSide} DEBIT SPREAD` : selectedOption.contractSymbol}
                     </span>
                   </div>
-                  <div className="flex justify-between items-end">
-                    <span className="text-gray-400">Ask</span>
+                  {spreadMode ? (
+                    <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-gray-700/50">
+                      {(() => {
+                        const sorted = [...spreadLegs].sort((a, b) => a.strike - b.strike)
+                        const long = tradeSide === 'CALL' ? sorted[0] : sorted[1]
+                        const short = tradeSide === 'CALL' ? sorted[1] : sorted[0]
+                        return (
+                          <>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-green-400">Buy (Long)</span>
+                              <span className="font-mono">${long.strike}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-red-400">Sell (Short)</span>
+                              <span className="font-mono">${short.strike}</span>
+                            </div>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-gray-400">Break Even</span>
+                        <span className="font-mono">
+                          $
+                          {(tradeSide === 'CALL'
+                            ? selectedOption.strike + selectedOption.lastPrice
+                            : selectedOption.strike - selectedOption.lastPrice
+                          ).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex justify-between items-end mt-2">
+                    <span className="text-gray-400">{spreadMode ? 'Net Debit' : 'Ask'}</span>
                     <span className="font-bold text-2xl text-green-400">
                       $
-                      {(selectedOption.lastPrice * 100).toLocaleString(undefined, {
-                        maximumFractionDigits: 0,
-                      })}
+                      {spreadMode
+                        ? (
+                            Math.abs(spreadLegs[0]?.lastPrice - spreadLegs[1]?.lastPrice) * 100
+                          ).toLocaleString(undefined, { maximumFractionDigits: 0 })
+                        : (selectedOption?.lastPrice * 100).toLocaleString(undefined, {
+                            maximumFractionDigits: 0,
+                          })}
                     </span>
                   </div>
                 </div>
@@ -394,7 +538,12 @@ export default function TradingPage() {
                   <span>Estimated Cost</span>
                   <span>
                     $
-                    {(selectedOption.lastPrice * quantity * 100).toLocaleString(undefined, {
+                    {(spreadMode
+                      ? Math.abs(spreadLegs[0]?.lastPrice - spreadLegs[1]?.lastPrice) *
+                        quantity *
+                        100
+                      : selectedOption?.lastPrice * quantity * 100
+                    ).toLocaleString(undefined, {
                       maximumFractionDigits: 0,
                     })}
                   </span>
