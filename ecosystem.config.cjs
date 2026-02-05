@@ -5,12 +5,8 @@ module.exports = {
       cwd: './backend',
       script: 'src/server.ts',
       interpreter: 'bun',
-      env_production: {
+      env: {
         NODE_ENV: 'production',
-        PORT: 4221,
-      },
-      env_development: {
-        NODE_ENV: 'development',
         PORT: 4221,
       },
     },
