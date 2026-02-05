@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import { useGetStatusQuery } from '@/store/api/authApi'
 import { setCredentials, logout } from '@/store/slices/authSlice'
 
 export default function AuthInitializer({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch()
-  const [isInitialized, setIsInitialized] = useState(false)
 
   // We skip the query if we already have a token in state/localStorage,
   // but we actually want to verify it.
@@ -29,10 +28,9 @@ export default function AuthInitializer({ children }: { children: React.ReactNod
       dispatch(logout())
     }
 
-    setIsInitialized(true)
   }, [data, error, isLoading, dispatch])
 
-  if (!isInitialized && isLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
         Loading...

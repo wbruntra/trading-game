@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { toast } from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
@@ -36,7 +36,6 @@ export default function TradingPage() {
 
   // Autocomplete State
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [filteredSuggestions, setFilteredSuggestions] = useState<typeof symbolsData>([])
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLUListElement>(null)
@@ -70,23 +69,19 @@ export default function TradingPage() {
     e.preventDefault()
     setSearchSymbol(symbol)
     setShowSuggestions(false)
+    setActiveSuggestionIndex(-1)
   }
 
-  // Filter suggestions
-  useEffect(() => {
-    if (symbol) {
-      const filtered = symbolsData
-        .filter(
-          (s) =>
-            s.symbol.toLowerCase().startsWith(symbol.toLowerCase()) ||
-            s.name.toLowerCase().includes(symbol.toLowerCase()),
-        )
-        .slice(0, 10)
-      setFilteredSuggestions(filtered)
-      setActiveSuggestionIndex(-1)
-    } else {
-      setFilteredSuggestions([])
-    }
+  // Filter suggestions using useMemo (derived state, not side effect)
+  const filteredSuggestions = useMemo(() => {
+    if (!symbol) return []
+    return symbolsData
+      .filter(
+        (s) =>
+          s.symbol.toLowerCase().startsWith(symbol.toLowerCase()) ||
+          s.name.toLowerCase().includes(symbol.toLowerCase()),
+      )
+      .slice(0, 10)
   }, [symbol])
 
   // Handle outside click
@@ -138,6 +133,7 @@ export default function TradingPage() {
         setSymbol(selected.symbol)
         setSearchSymbol(selected.symbol)
         setShowSuggestions(false)
+        setActiveSuggestionIndex(-1)
       }
     } else if (e.key === 'Escape') {
       setShowSuggestions(false)
@@ -148,6 +144,7 @@ export default function TradingPage() {
     setSymbol(selectedSymbol)
     setSearchSymbol(selectedSymbol)
     setShowSuggestions(false)
+    setActiveSuggestionIndex(-1)
   }
 
   // ... (existing code)
@@ -291,6 +288,7 @@ export default function TradingPage() {
             onChange={(e) => {
               setSymbol(e.target.value.toUpperCase())
               setShowSuggestions(true)
+              setActiveSuggestionIndex(-1)
             }}
             onFocus={() => {
               if (symbol) setShowSuggestions(true)

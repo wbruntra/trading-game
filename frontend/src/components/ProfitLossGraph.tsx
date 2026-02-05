@@ -18,6 +18,26 @@ interface ProfitLossGraphProps {
   quantity?: number
 }
 
+// Custom Tooltip
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const dataPoint = payload[0].payload
+    const isProfit = dataPoint.profit >= 0
+    return (
+      <div className="bg-gray-800 border border-gray-700 p-3 rounded shadow-xl">
+        <p className="text-gray-400 text-sm mb-1">
+          At Share Price:{' '}
+          <span className="text-white font-mono">${dataPoint.price.toFixed(2)}</span>
+        </p>
+        <p className={`font-bold font-mono ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+          {isProfit ? 'Profit' : 'Loss'}: ${Math.abs(dataPoint.profit).toFixed(2)}
+        </p>
+      </div>
+    )
+  }
+  return null
+}
+
 export function ProfitLossGraph({
   strikePrice,
   premium,
@@ -66,26 +86,6 @@ export function ProfitLossGraph({
     }
     return points
   }, [strikePrice, premium, isCall, currentPrice, quantity])
-
-  // Custom Tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const dataPoint = payload[0].payload
-      const isProfit = dataPoint.profit >= 0
-      return (
-        <div className="bg-gray-800 border border-gray-700 p-3 rounded shadow-xl">
-          <p className="text-gray-400 text-sm mb-1">
-            At Share Price:{' '}
-            <span className="text-white font-mono">${dataPoint.price.toFixed(2)}</span>
-          </p>
-          <p className={`font-bold font-mono ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-            {isProfit ? 'Profit' : 'Loss'}: ${Math.abs(dataPoint.profit).toFixed(2)}
-          </p>
-        </div>
-      )
-    }
-    return null
-  }
 
   // Calculate Break Even for display
   const breakEvenPrice = isCall ? strikePrice + premium : strikePrice - premium
