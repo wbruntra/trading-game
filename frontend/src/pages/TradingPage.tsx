@@ -13,6 +13,9 @@ import {
 } from '@/store/api/gameApi'
 import { useSelector } from 'react-redux'
 import type { RootState } from '@/store'
+import { Modal } from '@/components/Modal'
+import { ProfitLossGraph } from '@/components/ProfitLossGraph'
+import { TrendingUp } from 'lucide-react'
 
 export default function TradingPage() {
   const { activeCompetitionId } = useSelector((state: RootState) => state.game)
@@ -28,6 +31,7 @@ export default function TradingPage() {
   const [tradeSide, setTradeSide] = useState<'CALL' | 'PUT'>('CALL')
   const [spreadMode, setSpreadMode] = useState(false)
   const [spreadLegs, setSpreadLegs] = useState<any[]>([])
+  const [showPLModal, setShowPLModal] = useState(false)
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -548,6 +552,50 @@ export default function TradingPage() {
                     })}
                   </span>
                 </div>
+
+                {!spreadMode && selectedOption && (
+                  <button
+                    onClick={() => setShowPLModal(true)}
+                    className="w-full py-2 bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg flex items-center justify-center gap-2 text-blue-400 font-medium transition-all mb-4 group"
+                  >
+                    <TrendingUp size={18} className="group-hover:scale-110 transition-transform" />
+                    Simulate Returns
+                  </button>
+                )}
+
+                <Modal
+                  isOpen={showPLModal}
+                  onClose={() => setShowPLModal(false)}
+                  title="Profit/Loss Simulation"
+                >
+                  {selectedOption && (
+                    <div className="p-2">
+                      <div className="flex items-center gap-2 mb-6">
+                        <span className="text-2xl font-bold">{optionsChain?.symbol}</span>
+                        <span
+                          className={`px-2 py-1 rounded text-sm font-bold ${
+                            tradeSide === 'CALL'
+                              ? 'bg-green-900/50 text-green-400'
+                              : 'bg-red-900/50 text-red-400'
+                          }`}
+                        >
+                          ${selectedOption.strike} {tradeSide === 'CALL' ? 'Call' : 'Put'}
+                        </span>
+                        <span className="text-gray-400 text-sm">
+                          Expires {format(new Date(selectedDate! * 1000), 'MMM d, yyyy')}
+                        </span>
+                      </div>
+
+                      <ProfitLossGraph
+                        strikePrice={selectedOption.strike}
+                        premium={selectedOption.lastPrice}
+                        isCall={tradeSide === 'CALL'}
+                        currentPrice={currentPrice}
+                        quantity={quantity}
+                      />
+                    </div>
+                  )}
+                </Modal>
 
                 <button
                   onClick={handleTrade}
