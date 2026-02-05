@@ -16,7 +16,7 @@ export default function PortfolioPage() {
   const { activeCompetitionId } = useSelector((state: RootState) => state.game)
   const { data: portfolio, isLoading } = useGetPortfolioByCompetitionQuery(activeCompetitionId!, {
     skip: !activeCompetitionId,
-    pollingInterval: 30000, // Refresh every 30 seconds
+    pollingInterval: 90000, // Refresh every 90 seconds
   })
   const [placeTrade] = usePlaceTradeMutation()
   const [closeSpread] = useCloseSpreadMutation()
