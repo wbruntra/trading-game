@@ -97,6 +97,23 @@ router.get('/competitions/:competitionId/leaderboard', async (req: AuthRequest, 
   }
 })
 
+// Admin/System Routes
+router.post('/admin/snapshot', async (req: AuthRequest, res: Response) => {
+  try {
+    // Simple verification - in prod use a stronger secret check
+    const secret = req.headers['x-admin-secret']
+    if (secret !== process.env.ADMIN_SECRET && process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Unauthorized' })
+    }
+
+    const result = await tradingService.snapshotAllPortfolios()
+    res.json(result)
+  } catch (error: any) {
+    console.error('Snapshot failed:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // Saved Trades Routes
 router.post(
   '/competitions/:competitionId/saved-trades',

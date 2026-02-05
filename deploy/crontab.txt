@@ -1,0 +1,5 @@
+# Portfolio Snapshot Cron Job
+# Runs every hour at :50 during US Market Hours (9:50 AM - 3:50 PM ET)
+# Local Time (UTC+1): 3:50 PM - 9:50 PM
+
+50 15-21 * * 1-5 cd /home/william/personal/trading-game/backend && /home/william/.bun/bin/bun run snapshot >> /home/william/personal/trading-game/backend/logs/snapshot.log 2>&1
