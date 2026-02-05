@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useGetLeaderboardQuery } from '@/store/api/gameApi'
 import { format } from 'date-fns'
+import { Eye } from 'lucide-react'
 
 export default function LeaderboardPage() {
   const { competitionId } = useParams<{ competitionId: string }>()
@@ -82,12 +83,21 @@ export default function LeaderboardPage() {
                   </div>
                 </td>
                 <td className="py-4 px-6">
-                  <Link
-                    to={`/leaderboard/${competitionId}/portfolio/${entry.id}`}
-                    className="font-semibold text-lg hover:text-blue-400 hover:underline transition-colors"
-                  >
-                    {entry.username}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={`/leaderboard/${competitionId}/portfolio/${entry.id}`}
+                      className="font-semibold text-lg hover:text-blue-400 hover:underline transition-colors"
+                    >
+                      {entry.username}
+                    </Link>
+                    <Link
+                      to={`/leaderboard/${competitionId}/portfolio/${entry.id}`}
+                      className="p-1.5 bg-gray-700/50 hover:bg-gray-700 rounded-md transition-all group/icon border border-transparent hover:border-blue-500/30"
+                      title="View Portfolio"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-gray-400 group-hover/icon:text-blue-400 transition-colors" />
+                    </Link>
+                  </div>
                 </td>
                 <td className="py-4 px-6 text-right">
                   <span className="font-mono text-xl font-bold text-green-400">
