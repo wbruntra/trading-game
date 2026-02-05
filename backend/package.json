@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bun --watch src/server.ts",
     "start": "bun src/server.ts",
-    "migrate": "bun src/scripts/migrate.ts",
+    "migrate": "bun src/scripts/migrate.ts && bun src/scripts/export-table-ddl.ts",
     "rollback": "bun src/scripts/rollback.ts"
   },
   "devDependencies": {
