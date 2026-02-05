@@ -46,6 +46,7 @@ export default function TradingPage() {
   const {
     data: optionsChain,
     isLoading,
+    isFetching,
     error,
   } = useGetOptionsChainQuery(
     {
@@ -105,6 +106,19 @@ export default function TradingPage() {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
+
+  // Auto-scroll to current price when options data loads
+  useEffect(() => {
+    if (optionsChain && !isFetching && !isLoading) {
+      const timer = setTimeout(() => {
+        const currentPriceRow = document.getElementById('current-price-row')
+        if (currentPriceRow) {
+          currentPriceRow.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        }
+      }, 150)
+      return () => clearTimeout(timer)
+    }
+  }, [optionsChain, isFetching, isLoading])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {

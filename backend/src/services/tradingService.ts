@@ -606,8 +606,7 @@ export class TradingService {
       const netDebit = (longPrice - shortPrice) * 100 * tradeDetails.quantity
 
       if (netDebit <= 0) {
-        // Unusual but possible with arbitrage or bad data. Allow but warn?
-        // For game purposes, let's allow it but ensure min debit?
+        throw new Error('Invalid spread: Would result in a credit to your account. Market data may be stale.')
       }
 
       if (portfolio.cash_balance < netDebit) {
@@ -739,6 +738,10 @@ export class TradingService {
 
       // Net Credit = (Long Sell Price - Short Buy Price)
       const netCredit = (longPrice - shortPrice) * quantityToClose * 100
+
+      if (netCredit < 0) {
+        throw new Error('Invalid spread close: Would result in a debit to close the position. Market data may be stale.')
+      }
 
       // Insert Closing Trades
       // Sell Long Leg
