@@ -4,6 +4,23 @@ import { authenticateToken, AuthRequest } from '@/middleware/authMiddleware'
 
 const router = Router()
 
+// Admin/System Routes
+router.post('/admin/snapshot', async (req: AuthRequest, res: Response) => {
+  try {
+    // Simple verification - in prod use a stronger secret check
+    const secret = req.headers['x-admin-secret']
+    if (secret !== process.env.ADMIN_SECRET && process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Unauthorized' })
+    }
+
+    const result = await tradingService.snapshotAllPortfolios()
+    res.json(result)
+  } catch (error: any) {
+    console.error('Snapshot failed:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 router.use(authenticateToken)
 
 router.post('/competitions/:competitionId/trade', async (req: AuthRequest, res: Response) => {
@@ -93,23 +110,6 @@ router.get('/competitions/:competitionId/leaderboard', async (req: AuthRequest, 
     const leaderboard = await tradingService.getLeaderboard(Number(compIdString), refresh)
     res.json(leaderboard)
   } catch (error: any) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-// Admin/System Routes
-router.post('/admin/snapshot', async (req: AuthRequest, res: Response) => {
-  try {
-    // Simple verification - in prod use a stronger secret check
-    const secret = req.headers['x-admin-secret']
-    if (secret !== process.env.ADMIN_SECRET && process.env.NODE_ENV === 'production') {
-      return res.status(403).json({ error: 'Unauthorized' })
-    }
-
-    const result = await tradingService.snapshotAllPortfolios()
-    res.json(result)
-  } catch (error: any) {
-    console.error('Snapshot failed:', error)
     res.status(500).json({ error: error.message })
   }
 })
