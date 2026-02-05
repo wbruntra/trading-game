@@ -27,9 +27,18 @@ export class TradingService {
         // Standard OCC: 6 digits date, 1 digit type, 8 digits strike (integer, div by 1000)
         const match = trade.option_symbol.match(/([A-Z]+)(\d{6})([CP])(\d{8})/)
         let strike = 0
-        let expirationDate = ''
+        // Use stored expiration date if available, otherwise parse
+        let expirationDate = trade.expiration_date || ''
+
         if (match) {
-          expirationDate = match[2] // YYMMDD
+          // If no stored date, parse from symbol (YYMMDD format)
+          if (!expirationDate) {
+            expirationDate = match[2]
+          } else {
+            // Ensure we return consistent format. If stored as YYYY-MM-DD, keep it.
+            // If it's the old YYMMDD, keep it. The frontend formatter will handle both.
+          }
+
           strike = parseInt(match[4], 10) / 1000
         }
 
@@ -465,6 +474,17 @@ export class TradingService {
         await trx('portfolios').where({ id: portfolio.id }).increment('cash_balance', totalCost)
       }
 
+      // Parse expiration date from option symbol
+      const match = tradeDetails.optionSymbol.match(/[A-Z]+(\d{6})[CP]\d{8}/)
+      let expirationDate = null
+      if (match) {
+        const dateStr = match[1] // YYMMDD
+        const year = '20' + dateStr.substring(0, 2)
+        const month = dateStr.substring(2, 4)
+        const day = dateStr.substring(4, 6)
+        expirationDate = `${year}-${month}-${day}`
+      }
+
       // 4. Record Trade
       const [trade] = await trx('trades')
         .insert({
@@ -476,6 +496,7 @@ export class TradingService {
           quantity: tradeDetails.quantity,
           price: price,
           timestamp: new Date(),
+          expiration_date: expirationDate,
         })
         .returning('*')
 

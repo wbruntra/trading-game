@@ -8,5 +8,6 @@ CREATE TABLE `trades` (
   `quantity` integer not null,
   `price` float not null,
   `timestamp` datetime default CURRENT_TIMESTAMP,
+  `expiration_date` date null,
   foreign key(`portfolio_id`) references `portfolios`(`id`) on delete CASCADE
 )
