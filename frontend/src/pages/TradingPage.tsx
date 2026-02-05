@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { toast } from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
+import symbolsData from '@/assets/data/symbols.json'
 import {
   useGetOptionsChainQuery,
   usePlaceTradeMutation,
@@ -33,6 +34,13 @@ export default function TradingPage() {
   const [spreadLegs, setSpreadLegs] = useState<any[]>([])
   const [showPLModal, setShowPLModal] = useState(false)
 
+  // Autocomplete State
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [filteredSuggestions, setFilteredSuggestions] = useState<typeof symbolsData>([])
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const suggestionsRef = useRef<HTMLUListElement>(null)
+
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const {
@@ -60,6 +68,72 @@ export default function TradingPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setSearchSymbol(symbol)
+    setShowSuggestions(false)
+  }
+
+  // Filter suggestions
+  useEffect(() => {
+    if (symbol) {
+      const filtered = symbolsData
+        .filter(
+          (s) =>
+            s.symbol.toLowerCase().startsWith(symbol.toLowerCase()) ||
+            s.name.toLowerCase().includes(symbol.toLowerCase()),
+        )
+        .slice(0, 10)
+      setFilteredSuggestions(filtered)
+      setActiveSuggestionIndex(-1)
+    } else {
+      setFilteredSuggestions([])
+    }
+  }, [symbol])
+
+  // Handle outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node) &&
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (!showSuggestions) {
+        setShowSuggestions(true)
+        return
+      }
+      setActiveSuggestionIndex((prev) => (prev < filteredSuggestions.length - 1 ? prev + 1 : prev))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveSuggestionIndex((prev) => (prev > 0 ? prev - 1 : -1))
+    } else if (e.key === 'Enter') {
+      if (showSuggestions && activeSuggestionIndex >= 0) {
+        e.preventDefault()
+        const selected = filteredSuggestions[activeSuggestionIndex]
+        setSymbol(selected.symbol)
+        setSearchSymbol(selected.symbol)
+        setShowSuggestions(false)
+      }
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false)
+    }
+  }
+
+  const handleSuggestionClick = (selectedSymbol: string) => {
+    setSymbol(selectedSymbol)
+    setSearchSymbol(selectedSymbol)
+    setShowSuggestions(false)
   }
 
   // ... (existing code)
@@ -195,13 +269,45 @@ export default function TradingPage() {
 
       {/* Search */}
       <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4 mb-6 sm:mb-8">
-        <input
-          type="text"
-          value={symbol}
-          onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-          placeholder="Enter Stock Symbol (e.g. SPY)"
-          className="flex-1 max-w-full sm:max-w-md px-4 py-2 bg-gray-800 rounded-lg border border-gray-700 font-mono text-lg text-white placeholder-gray-500"
-        />
+        <div className="relative flex-1 max-w-full sm:max-w-md">
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={symbol}
+            onChange={(e) => {
+              setSymbol(e.target.value.toUpperCase())
+              setShowSuggestions(true)
+            }}
+            onFocus={() => {
+              if (symbol) setShowSuggestions(true)
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="Enter Stock Symbol (e.g. SPY)"
+            className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-700 font-mono text-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+            autoComplete="off"
+          />
+          {showSuggestions && filteredSuggestions.length > 0 && (
+            <ul
+              ref={suggestionsRef}
+              className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl max-h-60 overflow-y-auto"
+            >
+              {filteredSuggestions.map((s, index) => (
+                <li
+                  key={s.symbol}
+                  onClick={() => handleSuggestionClick(s.symbol)}
+                  className={`px-4 py-3 cursor-pointer flex justify-between items-center transition-colors border-b border-gray-700/50 last:border-0 ${
+                    index === activeSuggestionIndex ? 'bg-blue-600/20' : 'hover:bg-gray-700'
+                  }`}
+                >
+                  <span className="font-bold font-mono text-white">{s.symbol}</span>
+                  <span className="text-sm text-gray-400 truncate ml-4 flex-1 text-right">
+                    {s.name}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <button
           type="submit"
           className="px-6 py-2 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95"
