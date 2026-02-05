@@ -79,7 +79,21 @@ export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsLis
                   <div className="text-xs text-gray-500 mb-0.5">Share Price</div>
                   <div className="font-mono font-semibold text-gray-300">
                     {holding.underlyingPrice ? (
-                      `$${holding.underlyingPrice.toFixed(2)}`
+                      <div className="flex flex-col">
+                        <span>${holding.underlyingPrice.toFixed(2)}</span>
+                        {holding.underlyingChange !== undefined &&
+                          holding.underlyingChangePercent !== undefined && (
+                            <span
+                              className={`text-xs ${
+                                holding.underlyingChange >= 0 ? 'text-green-400' : 'text-red-400'
+                              }`}
+                            >
+                              {holding.underlyingChange >= 0 ? '+' : ''}
+                              {holding.underlyingChange.toFixed(2)} (
+                              {holding.underlyingChangePercent.toFixed(2)}%)
+                            </span>
+                          )}
+                      </div>
                     ) : (
                       <span className="text-gray-600">---</span>
                     )}
@@ -202,7 +216,21 @@ export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsLis
                   </td>
                   <td className="py-4 text-right font-mono text-gray-300">
                     {holding.underlyingPrice ? (
-                      `$${holding.underlyingPrice.toFixed(2)}`
+                      <div className="flex flex-col items-end">
+                        <span>${holding.underlyingPrice.toFixed(2)}</span>
+                        {holding.underlyingChange !== undefined &&
+                          holding.underlyingChangePercent !== undefined && (
+                            <span
+                              className={`text-xs ${
+                                holding.underlyingChange >= 0 ? 'text-green-400' : 'text-red-400'
+                              }`}
+                            >
+                              {holding.underlyingChange >= 0 ? '+' : ''}
+                              {holding.underlyingChange.toFixed(2)} (
+                              {holding.underlyingChangePercent.toFixed(2)}%)
+                            </span>
+                          )}
+                      </div>
                     ) : (
                       <span className="text-gray-600">---</span>
                     )}

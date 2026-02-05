@@ -18,6 +18,8 @@ export class TradingService {
         expirationDate: string
         lastPrice?: number
         underlyingPrice?: number
+        underlyingChange?: number
+        underlyingChangePercent?: number
         spreadId?: string
         spreadType?: 'CALL_DEBIT' | 'PUT_DEBIT'
         longLeg?: any
@@ -242,6 +244,8 @@ export class TradingService {
             const underlyingQuote = underlyingQuotesMap.get(h.symbol)
             if (underlyingQuote) {
               h.underlyingPrice = underlyingQuote.regularMarketPrice
+              h.underlyingChange = underlyingQuote.regularMarketChange
+              h.underlyingChangePercent = underlyingQuote.regularMarketChangePercent
             }
           })
 
@@ -328,6 +332,8 @@ export class TradingService {
           const underlyingQuote = underlyingQuotesMap.get(h.symbol)
           if (underlyingQuote) {
             h.underlyingPrice = underlyingQuote.regularMarketPrice
+            h.underlyingChange = underlyingQuote.regularMarketChange
+            h.underlyingChangePercent = underlyingQuote.regularMarketChangePercent
           }
         })
 
@@ -433,6 +439,8 @@ export class TradingService {
           const underlyingQuote = underlyingQuotesMap.get(h.symbol)
           if (underlyingQuote) {
             h.underlyingPrice = underlyingQuote.regularMarketPrice
+            h.underlyingChange = underlyingQuote.regularMarketChange
+            h.underlyingChangePercent = underlyingQuote.regularMarketChangePercent
           }
         })
 
@@ -606,7 +614,9 @@ export class TradingService {
       const netDebit = (longPrice - shortPrice) * 100 * tradeDetails.quantity
 
       if (netDebit <= 0) {
-        throw new Error('Invalid spread: Would result in a credit to your account. Market data may be stale.')
+        throw new Error(
+          'Invalid spread: Would result in a credit to your account. Market data may be stale.',
+        )
       }
 
       if (portfolio.cash_balance < netDebit) {
@@ -740,7 +750,9 @@ export class TradingService {
       const netCredit = (longPrice - shortPrice) * quantityToClose * 100
 
       if (netCredit < 0) {
-        throw new Error('Invalid spread close: Would result in a debit to close the position. Market data may be stale.')
+        throw new Error(
+          'Invalid spread close: Would result in a debit to close the position. Market data may be stale.',
+        )
       }
 
       // Insert Closing Trades

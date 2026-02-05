@@ -41,6 +41,8 @@ export interface Holding {
   expirationDate: string
   lastPrice?: number
   underlyingPrice?: number
+  underlyingChange?: number
+  underlyingChangePercent?: number
   spreadId?: string
   spreadType?: 'CALL_DEBIT' | 'PUT_DEBIT'
   longLeg?: {
