@@ -9,6 +9,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { setActiveCompetition } from '@/store/slices/gameSlice'
+import { Trophy } from 'lucide-react'
 
 export default function CompetitionsPage() {
   const { data: competitions, isLoading } = useGetCompetitionsQuery()
@@ -116,28 +117,31 @@ export default function CompetitionsPage() {
               <p className="text-gray-400 mb-4">
                 Balance: ${comp.initial_balance.toLocaleString()}
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-3 mt-4">
                 {isJoined ? (
                   <button
                     onClick={() => handleSwitch(comp.id)}
-                    className="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors font-semibold"
+                    className="w-full py-2.5 bg-green-600 hover:bg-green-700 rounded-lg transition-all font-semibold flex items-center justify-center gap-2 shadow-sm"
                   >
-                    Select
+                    Select Competition
                   </button>
                 ) : (
                   <button
                     onClick={() => handleJoin(comp.id)}
-                    className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors font-semibold shadow-lg hover:shadow-purple-500/20"
+                    className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 rounded-lg transition-all font-semibold shadow-lg hover:shadow-purple-500/20 flex items-center justify-center gap-2"
                   >
-                    Join
+                    Join Competition
                   </button>
                 )}
                 <button
                   onClick={() => navigate(`/leaderboard/${comp.id}`)}
-                  className="px-4 py-2 bg-gray-700 hover:bg-blue-600 rounded-lg transition-colors text-gray-300 hover:text-white"
+                  className="w-full py-2.5 bg-gray-700 hover:bg-gray-600 border border-gray-600 hover:border-amber-500/50 rounded-lg transition-all flex items-center justify-center gap-2 text-gray-200 group"
                   title="View Leaderboard"
                 >
-                  🏆
+                  <Trophy className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
+                  <span className="group-hover:text-amber-400 transition-colors">
+                    View Standings
+                  </span>
                 </button>
               </div>
             </div>
