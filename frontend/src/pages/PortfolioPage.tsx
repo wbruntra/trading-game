@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   useGetPortfolioByCompetitionQuery,
+  useGetPortfolioHistoryQuery,
   usePlaceTradeMutation,
   useCloseSpreadMutation,
 } from '@/store/api/gameApi'
@@ -11,6 +12,7 @@ import { useSelector } from 'react-redux'
 import type { RootState } from '@/store'
 import { PortfolioSummary } from '@/components/portfolio/PortfolioSummary'
 import { HoldingsList } from '@/components/portfolio/HoldingsList'
+import { PortfolioHistoryChart } from '@/components/portfolio/PortfolioHistoryChart'
 
 export default function PortfolioPage() {
   const { activeCompetitionId } = useSelector((state: RootState) => state.game)
@@ -18,16 +20,23 @@ export default function PortfolioPage() {
     skip: !activeCompetitionId,
     pollingInterval: 90000, // Refresh every 90 seconds
   })
+  const { data: portfolioHistory, isLoading: isHistoryLoading } = useGetPortfolioHistoryQuery(
+    portfolio?.id?.toString() || '',
+    {
+      skip: !portfolio?.id,
+    }
+  )
   const [placeTrade] = usePlaceTradeMutation()
   const [closeSpread] = useCloseSpreadMutation()
   const navigate = useNavigate()
 
-  const [modalOpen, setModalOpen] = useState(false)
+  const [sellModalOpen, setSellModalOpen] = useState(false)
+  const [chartModalOpen, setChartModalOpen] = useState(false)
   const [selectedHolding, setSelectedHolding] = useState<any>(null)
 
   const handleSellClick = (holding: any) => {
     setSelectedHolding(holding)
-    setModalOpen(true)
+    setSellModalOpen(true)
   }
 
   const handleConfirmSell = async () => {
@@ -52,7 +61,7 @@ export default function PortfolioPage() {
         }).unwrap()
         toast.success('Sold successfully!')
       }
-      setModalOpen(false)
+      setSellModalOpen(false)
     } catch (err: any) {
       toast.error(`Failed to close position: ${err.data?.error || err.message}`)
     }
@@ -89,25 +98,60 @@ export default function PortfolioPage() {
   return (
     <div className="min-h-screen p-4 sm:p-8 text-white">
       <ConfirmationModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        isOpen={sellModalOpen}
+        onClose={() => setSellModalOpen(false)}
         onConfirm={handleConfirmSell}
         title="Confirm Sell"
         message={`Are you sure you want to sell ${selectedHolding?.quantity} contracts of ${selectedHolding?.symbol} ${selectedHolding?.side}?`}
         confirmText="Sell"
       />
 
+      {/* Chart Modal */}
+      {chartModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-xl border border-gray-700 p-4 sm:p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold">Portfolio Value History</h2>
+              <button
+                onClick={() => setChartModalOpen(false)}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            {isHistoryLoading ? (
+              <div className="flex items-center justify-center h-[300px] text-gray-400">
+                Loading history...
+              </div>
+            ) : (
+              <PortfolioHistoryChart
+                data={portfolioHistory || []}
+                initialBalance={portfolio?.initial_balance || 100000}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">{portfolio.competition_name}</h1>
           <p className="text-gray-400 text-sm">Your portfolio for this competition</p>
         </div>
-        <button
-          onClick={() => navigate('/trade')}
-          className="px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold"
-        >
-          Trade
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setChartModalOpen(true)}
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
+          >
+            View Chart
+          </button>
+          <button
+            onClick={() => navigate('/trade')}
+            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold"
+          >
+            Trade
+          </button>
+        </div>
       </div>
 
       <PortfolioSummary

@@ -83,6 +83,17 @@ router.get('/portfolios/:portfolioId', async (req: AuthRequest, res: Response) =
   }
 })
 
+router.get('/portfolios/:portfolioId/history', async (req: AuthRequest, res: Response) => {
+  try {
+    const { portfolioId } = req.params
+    const pIdString = Array.isArray(portfolioId) ? portfolioId[0] : portfolioId
+    const history = await tradingService.getPortfolioHistory(Number(pIdString))
+    res.json(history)
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
 router.get('/portfolios/competition/:competitionId', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user.id

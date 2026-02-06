@@ -228,7 +228,11 @@ export class TradingService {
   }
 
   async getPortfolio(portfolioId: number) {
-    const portfolio = await db('portfolios').where({ id: portfolioId }).first()
+    const portfolio = await db('portfolios')
+      .join('competitions', 'portfolios.competition_id', 'competitions.id')
+      .where({ 'portfolios.id': portfolioId })
+      .select('portfolios.*', 'competitions.initial_balance')
+      .first()
     const trades = await db('trades')
       .where({ portfolio_id: portfolioId })
       .orderBy('timestamp', 'asc')
@@ -1044,6 +1048,19 @@ export class TradingService {
     await db('saved_trades').where({ id: savedTradeId }).delete()
 
     return result
+  }
+
+  async getPortfolioHistory(portfolioId: number) {
+    const history = await db('portfolio_history')
+      .where({ portfolio_id: portfolioId })
+      .orderBy('timestamp', 'asc')
+      .select('total_value', 'cash_balance', 'timestamp')
+
+    return history.map((row: any) => ({
+      totalValue: Number(row.total_value),
+      cashBalance: Number(row.cash_balance),
+      timestamp: row.timestamp,
+    }))
   }
 }
 

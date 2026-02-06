@@ -25,6 +25,7 @@ export interface Portfolio {
   competition_id: number
   competition_name?: string
   cash_balance: number
+  initial_balance?: number
   created_at: string
   trades?: Trade[]
   holdings?: Holding[]
@@ -102,6 +103,12 @@ export interface LeaderboardEntry {
   total_value: number
   cash_balance: number
   last_updated_at: string
+}
+
+export interface PortfolioHistoryEntry {
+  totalValue: number
+  cashBalance: number
+  timestamp: string
 }
 
 export interface PlaceSpreadTradeRequest {
@@ -216,6 +223,12 @@ export const gameApi = createApi({
         { type: 'Portfolio', id: `COMP_${competitionId}` },
       ],
     }),
+    getPortfolioHistory: builder.query<PortfolioHistoryEntry[], string>({
+      query: (portfolioId) => `/trading/portfolios/${portfolioId}/history`,
+      providesTags: (_result, _error, portfolioId) => [
+        { type: 'Portfolio', id: `HISTORY_${portfolioId}` },
+      ],
+    }),
     placeTrade: builder.mutation<
       { trade: Trade; newBalance: number },
       { competitionId: string; trade: TradeRequest }
@@ -297,6 +310,7 @@ export const {
   useGetOptionsChainQuery,
   useGetPortfolioQuery,
   useGetPortfolioByCompetitionQuery,
+  useGetPortfolioHistoryQuery,
   useGetMyPortfoliosQuery,
   usePlaceTradeMutation,
   useGetLeaderboardQuery,
