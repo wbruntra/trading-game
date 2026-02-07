@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import { formatExpiration } from '@/utils/formatters'
 import type { Holding } from '@/store/api/gameApi'
 
@@ -7,16 +9,129 @@ interface HoldingsListProps {
   onSell?: (holding: Holding) => void
 }
 
+type SortKey =
+  | 'symbol'
+  | 'expirationDate'
+  | 'totalValue'
+  | 'quantity'
+  | 'avgPrice'
+  | 'lastPrice'
+  | 'pl'
+  | 'underlyingPrice'
+
+interface SortConfig {
+  key: SortKey
+  direction: 'asc' | 'desc'
+}
+
 export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsListProps) {
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null)
+
   if (!holdings || holdings.length === 0) {
     return <p className="text-gray-500 italic">No active positions.</p>
   }
+
+  const handleSort = (key: SortKey) => {
+    setSortConfig((current) => {
+      if (!current || current.key !== key) {
+        return { key, direction: 'desc' } // Default to desc for numbers/dates usually
+      }
+      if (current.direction === 'desc') {
+        return { key, direction: 'asc' }
+      }
+      return null // Toggle off
+    })
+  }
+
+  const getSortedHoldings = () => {
+    if (!sortConfig) return holdings
+
+    return [...holdings].sort((a, b) => {
+      const { key, direction } = sortConfig
+      const multiplier = direction === 'asc' ? 1 : -1
+
+      if (key === 'totalValue') {
+        const valA = (a.lastPrice || 0) * a.quantity * 100
+        const valB = (b.lastPrice || 0) * b.quantity * 100
+        return (valA - valB) * multiplier
+      }
+
+      if (key === 'pl') {
+        const marketValueA = (a.lastPrice || 0) * a.quantity * 100
+        const plA = marketValueA - a.totalCost
+        const marketValueB = (b.lastPrice || 0) * b.quantity * 100
+        const plB = marketValueB - b.totalCost
+        return (plA - plB) * multiplier
+      }
+
+      // Handle simple property access
+      let valA: any = a[key as keyof Holding]
+      let valB: any = b[key as keyof Holding]
+
+      // Special handling for underlyingPrice (undefined check)
+      if (key === 'underlyingPrice') {
+        valA = a.underlyingPrice || 0
+        valB = b.underlyingPrice || 0
+      }
+
+      // Special handling for lastPrice
+      if (key === 'lastPrice') {
+        valA = a.lastPrice || 0
+        valB = b.lastPrice || 0
+      }
+
+      if (valA < valB) return -1 * multiplier
+      if (valA > valB) return 1 * multiplier
+      return 0
+    })
+  }
+
+  const sortedHoldings = getSortedHoldings()
+
+  const SortIcon = ({ column }: { column: SortKey }) => {
+    if (sortConfig?.key !== column)
+      return <ArrowUpDown className="w-4 h-4 text-gray-600 opacity-50" />
+    return sortConfig.direction === 'asc' ? (
+      <ArrowUp className="w-4 h-4 text-blue-400" />
+    ) : (
+      <ArrowDown className="w-4 h-4 text-blue-400" />
+    )
+  }
+
+  const SortableHeader = ({
+    label,
+    column,
+    align = 'left',
+  }: {
+    label: string
+    column: SortKey
+    align?: 'left' | 'right'
+  }) => (
+    <th
+      className={`py-3 ${
+        align === 'right' ? 'text-right' : 'text-left'
+      } cursor-pointer group hover:bg-gray-800/30 transition-colors select-none ${
+        align === 'right' ? 'pr-0' : 'pl-4'
+      }`}
+      onClick={() => handleSort(column)}
+    >
+      <div
+        className={`flex items-center gap-1 ${
+          align === 'right' ? 'justify-end' : 'justify-start'
+        }`}
+      >
+        {align === 'right' && <SortIcon column={column} />}
+        <span className="group-hover:text-gray-200 transition-colors">{label}</span>
+        {align === 'left' && <SortIcon column={column} />}
+      </div>
+    </th>
+  )
 
   return (
     <>
       {/* Mobile Card View */}
       <div className="space-y-3 md:hidden">
-        {holdings.map((holding) => {
+        {sortedHoldings.map((holding) => {
           const marketValue = (holding.lastPrice || 0) * holding.quantity * 100
           const pl = marketValue - holding.totalCost
           const plPct = holding.totalCost > 0 ? (pl / holding.totalCost) * 100 : 0
@@ -72,6 +187,12 @@ export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsLis
               {/* Stats Grid */}
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
+                  <div className="text-xs text-gray-500 mb-0.5">Expires</div>
+                  <div className="font-mono font-semibold">
+                    {formatExpiration(holding.expirationDate)}
+                  </div>
+                </div>
+                <div>
                   <div className="text-xs text-gray-500 mb-0.5">Quantity</div>
                   <div className="font-mono font-semibold">{holding.quantity}</div>
                 </div>
@@ -106,12 +227,6 @@ export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsLis
                     {(holding.avgPrice * 100).toLocaleString(undefined, {
                       maximumFractionDigits: 2,
                     })}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-0.5">Expires</div>
-                  <div className="font-mono font-semibold">
-                    {formatExpiration(holding.expirationDate)}
                   </div>
                 </div>
                 <div>
@@ -166,20 +281,20 @@ export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsLis
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="text-sm text-gray-400 border-b border-gray-700">
-              <th className="py-3 pl-4">Symbol</th>
+              <SortableHeader label="Symbol" column="symbol" />
+              <SortableHeader label="Expires" column="expirationDate" />
               <th className="py-3">Strike/Type</th>
-              <th className="py-3 text-right">Share Price</th>
-              <th className="py-3 text-right">Qty</th>
-              <th className="py-3 text-right">Avg Price</th>
-              <th className="py-3 text-right">Expires</th>
-              <th className="py-3 text-right">Current</th>
-              <th className="py-3 text-right">Total</th>
-              <th className="py-3 text-right">P/L</th>
+              <SortableHeader label="Share Price" column="underlyingPrice" align="right" />
+              <SortableHeader label="Qty" column="quantity" align="right" />
+              <SortableHeader label="Avg Price" column="avgPrice" align="right" />
+              <SortableHeader label="Current" column="lastPrice" align="right" />
+              <SortableHeader label="Total" column="totalValue" align="right" />
+              <SortableHeader label="P/L" column="pl" align="right" />
               {!readOnly && <th className="py-3 text-right pr-4">Action</th>}
             </tr>
           </thead>
           <tbody>
-            {holdings.map((holding) => {
+            {sortedHoldings.map((holding) => {
               const marketValue = (holding.lastPrice || 0) * holding.quantity * 100
               const pl = marketValue - holding.totalCost
               const plPct = holding.totalCost > 0 ? (pl / holding.totalCost) * 100 : 0
@@ -190,6 +305,7 @@ export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsLis
                   className="border-b border-gray-700/50 hover:bg-gray-700/20"
                 >
                   <td className="py-4 pl-4 font-bold">{holding.symbol}</td>
+                  <td className="py-4 font-mono">{formatExpiration(holding.expirationDate)}</td>
                   <td className="py-4">
                     {holding.spreadId ? (
                       <div className="flex flex-col text-xs font-mono">
@@ -241,9 +357,6 @@ export function HoldingsList({ holdings, readOnly = false, onSell }: HoldingsLis
                     {(holding.avgPrice * 100).toLocaleString(undefined, {
                       maximumFractionDigits: 2,
                     })}
-                  </td>
-                  <td className="py-4 text-right font-mono">
-                    {formatExpiration(holding.expirationDate)}
                   </td>
                   <td className="py-4 text-right font-mono">
                     {holding.lastPrice ? (
